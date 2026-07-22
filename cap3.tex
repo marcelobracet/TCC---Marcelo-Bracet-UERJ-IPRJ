@@ -1,0 +1,222 @@
+\chapter{MATERIAL E MÉTODOS}\label{cap3MatMet}
+Neste capítulo, são apresentadas as tecnologias utilizadas, as ferramentas adotadas e as etapas envolvidas no desenvolvimento do Sistema Integrado de Gestão para marmorarias. O objetivo é descrever de forma clara e estruturada o processo de concepção, implementação e validação do ERP, evidenciando as decisões técnicas que orientaram o desenvolvimento da solução. A proposta baseia-se na criação de uma aplicação moderna, acessível e orientada à eficiência operacional, buscando atender às demandas reais do setor de rochas ornamentais.
+
+O desenvolvimento do sistema foi fundamentado em práticas contemporâneas de engenharia de software, com ênfase em modularidade, escalabilidade, desempenho, reuso de componentes e segurança da informação. Para isso, foram selecionadas tecnologias amplamente consolidadas no mercado e compatíveis com uma arquitetura flexível, preparada para evoluções futuras. Além disso, buscou-se garantir uma experiência fluida e intuitiva para os usuários, considerando princípios de usabilidade, padronização de fluxos e redução de fricções no uso diário da aplicação.
+
+A escolha por tecnologias baseadas em computação em nuvem e arquitetura serverless teve como objetivo otimizar o ambiente de execução, automatizar escalabilidade e reduzir a necessidade de manutenção manual de servidores, assim como manter também uma alta disponibilidade, uma vez que em ambientes cloud conseguimos abusar das multi-regions caso necessário. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e com custos operacionais reduzidos.
+
+Este capítulo também apresenta os princípios que guiaram a modelagem dos processos internos, a definição dos fluxos de informação, as estratégias de persistência de dados e os mecanismos de autenticação utilizados. O intuito é fornecer uma visão detalhada do percurso técnico do projeto, desde as primeiras decisões de arquitetura até as etapas finais de entrega e testes do sistema.
+
+\section{Tecnologias Utilizadas}
+O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e amplamente reconhecidas no setor de software, buscando garantir uma experiência eficiente, segura e acessível para os usuários finais. A seleção das ferramentas considerou critérios como facilidade de implementação, agilidade, compatibilidade entre plataformas, escalabilidade e aderência às boas práticas do mercado. A seguir, serão listadas as principais e as tecnologias mais utilizadas  durante a execução e desenvolvimento desse projeto.
+
+
+     \begin{itemize}
+     \item \textbf{Cursor | IDE:} O ambiente de desenvolvimento integrado (IDE) principal utilizado foi o Cursor. Esta plataforma destaca-se na engenharia de software moderna por trazer Inteligência Artificial nativa e contextual embarcada diretamente no editor de código. A adoção dessa ferramenta foi estratégica para acelerar o ciclo de desenvolvimento do ERP, auxiliando na geração automatizada de código boilerplate, refatoração em tempo real, autocompletar contextual profundo e detecção precoce de bugs. A capacidade da IDE de compreender a arquitetura global do projeto permitiu maior agilidade na escrita das rotinas complexas de banco de dados e regras de negócio específicas, otimizando o tempo de entrega e mantendo a consistência do código-fonte.\end{itemize}
+
+     \begin{itemize}
+     \item \textbf{Frontend}: Para a camada de interface, optou-se pelo framework Next.js, devido à sua capacidade de oferecer alta performance, renderização híbrida (SSR e SSG) e excelente integração com APIs modernas. A biblioteca React foi utilizada como base para a construção dos componentes, permitindo a criação de uma interface dinâmica, modular e fácil de manter. A estilização foi realizada com Tailwind, garantindo rapidez, reutilização de estilos e maior controle sobre o design do sistema.\end{itemize}
+
+     \begin{itemize}
+     \item \textbf{Backend}: A camada de backend foi desenvolvida utilizando Golang com Gorm, uma combinação que oferece flexibilidade, rapidez e ampla adoção no ecossistema de desenvolvimento web. Além disso, foram aplicados padrões de arquitetura que permitem isolamento de módulos, fácil manutenção e expansão futura. Para autenticação, implementou-se o uso de JWT, garantindo um controle de acesso seguro e adaptado às necessidades do sistema.\end{itemize}
+
+     \begin{itemize}
+     \item \textbf{Banco de Dados}: O banco de dados utilizado foi o PostgreSQL, escolhido por sua robustez, segurança, garantia das propriedades ACID, estando em conformidade com cenários que exigem integridade e consistência de dados.\end{itemize}
+
+     \begin{itemize}
+     \item \textbf{Infraestrutura e Deploy}: A infraestrutura foi construída com base na Google Cloud, aproveitando recursos como o Compute Engine para execução dos serviços em máquinas virtuais localizadas na zona us-central1-a, docker para subir os diferentes serviços do backend, Vercel para servir o frontend, o GHCR para armazenamento das imagens. A automação do deploy foi configurada via CI/CD, permitindo entregas contínuas, alto controle do ciclo de builds e redução significativa de erros operacionais.\end{itemize}
+
+     \begin{itemize}
+     \item \textbf{Ferramentas Complementares}: Diversas ferramentas adicionais foram utilizadas ao longo do desenvolvimento, como Docker para conteinerização, GitHub para versionamento e organização do código, e Postman para simulação de requisições HTTP e documentação das rotas da API. Essas ferramentas foram essenciais para garantir um fluxo de desenvolvimento consistente, seguro e alinhado às boas práticas da área.\end{itemize}
+
+\section{Etapas do Desenvolvimento}
+O desenvolvimento do sistema ERP para marmorarias foi estruturado em etapas progressivas, iniciando pelo planejamento inicial e avançando pela definição da arquitetura, implementação das funcionalidades e validação do protótipo. Essas fases foram organizadas com o intuito de garantir clareza no processo, manter a coerência das decisões técnicas e assegurar que a aplicação atendesse às necessidades específicas do setor. A abordagem adotada priorizou práticas modernas de desenvolvimento, fundamentadas em modularidade, escalabilidade e segurança, permitindo que o sistema evoluísse de forma consistente ao longo das etapas do projeto.
+
+\subsection{Planejamento Inicial}
+A etapa de planejamento inicial teve como foco a definição dos objetivos gerais do sistema, a identificação das necessidades operacionais das marmorarias e o levantamento das funcionalidades essenciais para compor a primeira versão do ERP. Nesta fase, foi formulado um MVP, que serviu como base para orientar todo o processo de desenvolvimento, delimitando recursos prioritários como cadastro de clientes, geração e controle de orçamentos, controle de estoque e emissão básica de relatórios.
+
+Além da definição de requisitos, o planejamento envolveu a escolha das tecnologias mais adequadas para o projeto, considerando critérios como desempenho, curva de aprendizagem, integração entre serviços e facilidade de manutenção. Também foram mapeados os fluxos de interação do usuário, identificando pontos críticos que poderiam impactar na experiência de uso, como etapas de login, criação de pedidos e atualização de status das encomendas. Essa análise orientou as decisões relacionadas ao design da interface e à organização dos componentes no frontend.
+
+Outro aspecto relevante dessa etapa foi o levantamento de problemas enfrentados por marmorarias no dia a dia, o que incluiu questões relacionadas à falta de integração entre setores, dificuldades na comunicação de status de produção e ausência de uma visão consolidada sobre estoque e prazos. Essas informações permitiram alinhar o projeto às necessidades reais dos usuários finais, servindo como base para a fase seguinte, de estruturação arquitetural.
+
+\subsection{Estruturação da Arquitetura}
+A fase de estruturação da arquitetura concentrou-se na definição da organização interna do sistema, incluindo camadas, módulos, estratégias de comunicação e padrões de desenvolvimento. O objetivo dessa etapa foi estabelecer uma base sólida que garantisse escalabilidade, segurança e facilidade de evolução, permitindo que novas funcionalidades pudessem ser integradas ao sistema sem comprometer o desempenho ou a coerência estrutural.
+
+Para isso, definiu-se uma arquitetura orientada a serviços, em que o backend foi organizado em módulos independentes responsáveis por operações específicas, como autenticação, gerenciamento de pedidos, controle de estoque e administração de usuários. Essa modularização permitiu maior organização do código e facilitou a manutenção do sistema. O uso de APIs REST, construídas com Golang, garantiu uma comunicação clara e padronizada entre o frontend e o backend, reduzindo a complexidade das integrações.
+
+No frontend, o uso do Next.js possibilitou a adoção de uma estrutura baseada em componentes reutilizáveis, organizada em pastas que separam páginas, componentes visuais e serviços responsáveis por consumir as APIs. Além disso, foram definidos padrões visuais, princípios de design responsivo e diretrizes de navegação que contribuíram para tornar a interface intuitiva e consistente.
+
+Na camada de dados, a arquitetura foi estruturada sobre o banco PostgreSQL, utilizando o ORM do Go (GORM) para gerenciar modelos e consultas. Essa decisão proporcionou segurança, clareza na estrutura das entidades e facilidade de manutenção futura da base de dados. Também foram estabelecidas práticas de versionamento, uso de containers Docker e pipeline de integração contínua, que contribuíram para melhorar a confiabilidade do processo de deploy.
+
+Essa etapa consolidou as bases para a implementação do sistema, garantindo que todas as partes estivessem alinhadas e que o desenvolvimento pudesse seguir de forma organizada e eficiente nas fases seguintes.
+
+\subsection{Desenvolvimento do Backend}
+
+A construção do \textit{backend} teve início com a definição das entidades de domínio que representam o núcleo do sistema de gestão para marmorarias, entre elas: \textit{tenant} (empresa), usuário, cliente, produto, orçamento, configurações, planos de assinatura e registros de auditoria. A API foi desenvolvida na linguagem Go, utilizando o \textit{framework} Gin para o tratamento de requisições HTTP e o GORM como ORM (\textit{Object-Relational Mapping}) para persistência no banco de dados relacional PostgreSQL.
+
+A organização do código seguiu uma arquitetura em camadas inspirada na \textit{Clean Architecture}, com separação entre domínio (\texttt{domain}), casos de uso (\texttt{usecase}), entrega HTTP (\texttt{delivery/http}) e infraestrutura (\texttt{infra}). Essa divisão permite isolar as regras de negócio das dependências externas, facilitando manutenção, testes e evolução do sistema.
+
+A autenticação foi implementada com base em JWT (\textit{JSON Web Token}), por meio da biblioteca \texttt{golang-jwt}. Após a validação das credenciais, a API emite um par de tokens (\textit{access token} e \textit{refresh token}), contendo claims como identificador do usuário, identificador do \textit{tenant}, e-mail, papel (\textit{role}) e permissões. As senhas são armazenadas com hash bcrypt. O fluxo de cadastro de novas empresas ocorre pelo \textit{endpoint} público de \textit{provision}, que cria, em uma única operação, o \textit{tenant}, o usuário administrador e as configurações iniciais da empresa.
+
+Como se trata de uma aplicação \textit{multi-tenant}, cada recurso de negócio é isolado pelo \texttt{tenant\_id} presente no token. \textit{Middlewares} de autenticação, autorização por papel/permissão e auditoria protegem as rotas autenticadas, registrando operações de criação, atualização e exclusão para rastreabilidade.
+
+Foram implementados \textit{endpoints} sob o prefixo \texttt{/api/v1} para:
+\begin{itemize}
+  \item \textit{Provision} de empresa e administrador, \textit{login}, renovação de token e verificação de e-mail;
+  \item Cadastro e gestão de usuários, clientes, produtos e orçamentos;
+  \item Configurações da empresa (dados cadastrais e logo);
+  \item \textit{Upload} de arquivos (logo e imagens) via URLs assinadas;
+  \item Consulta de auditoria;
+  \item Healthcheck da aplicação, para em um ambiente de produção, por exemplo, consiga monitorar e ver se ela está saudável;
+\end{itemize}
+
+O armazenamento de mídias foi delegado ao Google Cloud Storage (GCS), por meio da biblioteca oficial \texttt{cloud.google.com/go/storage}. Em vez de receber o arquivo no servidor da API, o \textit{backend} emite URLs assinadas (\textit{signed URLs}) de escrita e leitura. O \textit{frontend} envia o arquivo diretamente ao \textit{bucket} (privado) e, para exibição, solicita uma URL assinada de leitura. Essa estratégia reduz a carga sobre a API, evita expor o \textit{bucket} publicamente e permite controlar o acesso por tempo limitado.
+
+Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o cliente autenticado solicita uma URL de \textit{upload} ao \textit{endpoint} \texttt{/uploads/sign}; a API gera a chave do objeto no \textit{bucket} e devolve a URL assinada de PUT; o \textit{frontend} realiza o envio direto ao GCS; posteriormente, a aplicação persiste apenas a referência (\texttt{object\_key}) e solicita URLs de leitura quando necessário. Com essa abordagem, a arquitetura torna-se mais leve, segura e escalável no tratamento de conteúdos multimídia.
+ 
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Diagrama da arquitetura geral da aplicação.}
+  \includegraphics[width=0.85\textwidth]{figures/diagrama-arquitetura-geral.png}
+  \label{fig:arquitetura-geral}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\subsection{Desenvolvimento do Frontend}
+
+O desenvolvimento da interface web priorizou usabilidade, responsividade e compatibilidade entre navegadores, permitindo que o usuário gerencie a operação da marmoraria a partir de um painel administrativo. A aplicação foi construída com Next.js, utilizando o App Router baseado em sistema de arquivos. Essa abordagem simplifica a organização das rotas, facilita a navegação entre páginas e favorece a leitura do código, acelerando o ciclo de desenvolvimento.
+A tipagem estática com TypeScript e a estilização com Tailwind CSS contribuíram para um código mais seguro e consistente, além de uma interface adaptável a diferentes resoluções de tela. A comunicação com a API REST foi implementada por meio da biblioteca Axios, com interceptores responsáveis por anexar o token JWT às requisições e renovar a sessão de forma silenciosa quando o \textit{access token} expira. Os tokens são persistidos no navegador e utilizados para manter o usuário autenticado entre recarregamentos da página.
+As principais funcionalidades implementadas no \textit{frontend} incluem: autenticação (\textit{login} e cadastro), painel inicial com indicadores e gráficos, gestão de clientes, produtos e orçamentos, edição de perfil, configurações da empresa (dados cadastrais, logo e cobrança) e controle de acesso por papel/permissão. Componentes reutilizáveis como formulários, tabelas, \textit{modals}, campos de \textit{upload} e layout do painel --- foram adotados para reduzir duplicação e padronizar a experiência do usuário.
+O fluxo de navegação da aplicação é apresentado na Figura~\ref{fig:arquitetura-geral}. Após o acesso inicial, o usuário realiza autenticação; em seguida, é direcionado ao \textit{dashboard}, de onde pode navegar para os módulos de clientes, produtos, orçamentos e configurações.
+ 
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Estrutura de navegação via App Router.}
+  \includegraphics[width=0.85\textwidth]{figures/estrutura-navegacao-app-router.png}
+  \label{fig:estrutura-navegacao-app-router}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\subsection{Integração entre Camadas}
+
+A integração entre o \textit{frontend} e o \textit{backend} foi realizada de forma progressiva, permitindo validar funcionalidades essenciais como autenticação (\textit{login}), cadastro de empresa (\textit{provision}), gestão de clientes, produtos e orçamentos, além das configurações da empresa. A comunicação ocorre por meio de requisições HTTP enviadas pelo painel web à API REST, utilizando tokens JWT para autenticação e autorização. No \textit{frontend}, a biblioteca Axios é responsável por essas requisições; por meio de \textit{interceptors}, o token de acesso é anexado automaticamente ao cabeçalho \texttt{Authorization} e, em caso de expiração (resposta HTTP 401), a sessão é renovada de forma silenciosa com o \textit{refresh token}, centralizando também o tratamento de erros.
+
+A Figura~\ref{fig:fluxo-cliente-servidor} ilustra o fluxo de comunicação entre cliente e servidor. O cliente envia uma requisição HTTP contendo o cabeçalho JWT; o servidor processa a solicitação e devolve uma resposta HTTP com payload em JSON.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Fluxo de comunicação cliente-servidor.}
+  \includegraphics[width=0.85\textwidth]{figures/cliente-servidor.png}
+  %\label{fig:fluxo-cliente-servidor}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao Google Cloud Storage (GCS) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL assinada de leitura. Essa estratégia mantém o \textit{bucket} privado, reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário.
+
+\subsection{Testes e Validação}
+
+Durante o desenvolvimento, a validação do sistema combinou testes manuais da interface web e testes automatizados no \textit{backend}, com foco em regras de negócio, autenticação e consistência das respostas da API.
+
+No \textit{frontend}, foram realizados testes manuais em navegadores desktop e em dispositivos móveis (iPhone e Android), avaliando a responsividade do painel, o fluxo de autenticação (\textit{login}, renovação de sessão e redirecionamento para rotas protegidas), a navegação entre os módulos (clientes, produtos, orçamentos e configurações) e a consistência dos dados exibidos após as operações de criação e edição. Também foram verificados cenários de \textit{upload} de imagens (logo e produtos), incluindo a obtenção de URLs assinadas e a exibição correta dos arquivos armazenados no Google Cloud Storage.
+
+No \textit{backend}, a validação automatizada foi implementada com o pacote padrão \texttt{testing} da linguagem Go, executada por meio do comando \texttt{go test ./...}. Para isolar as regras de negócio das dependências de infraestrutura, foram utilizados mocks manuais de repositórios (implementações em memória das interfaces de domínio), localizados no pacote \texttt{internal/mocks}. Essa abordagem permite simular o comportamento de persistência sem a necessidade de banco de dados real durante os testes unitários. Dentre os cenários cobertos pelos testes automatizados, destacam-se:
+\begin{itemize}
+  \item autenticação e emissão/validação de tokens JWT, incluindo geração de \textit{access token} e \textit{refresh token};
+  \item hashing e verificação de senhas com bcrypt;
+  \item \textit{provision} de \textit{tenant} com criação do usuário administrador e associação ao plano selecionado;
+  \item elegibilidade de uso (\textit{entitlement}) com base em período de teste e assinatura ativa;
+  \item validação de documentos (CNPJ), incluindo normalização de máscaras e rejeição de valores inválidos;
+  \item \textit{middleware} de autenticação e autorização por papel (\textit{role}), utilizando \texttt{httptest} e contexto de teste do Gin.
+\end{itemize}
+
+Complementarmente, foram realizadas validações manuais dos principais \textit{endpoints} da API (via Postman e pelo próprio painel), conferindo status HTTP, estrutura do JSON de resposta, mensagens de erro e regras de autorização.
+
+Essa combinação de testes manuais e automatizados permitiu verificar a corretude das regras de negócio, a integridade das requisições autenticadas e a estabilidade dos fluxos críticos do sistema antes da disponibilização em ambiente de produção.
+
+\section{Funcionalidades da Aplicação}
+
+O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de pequenas marmorarias por meio de uma interface moderna, intuitiva e amigável. A plataforma busca facilitar a comunicação e visualização dos dados, podendo pensar baseado em dados e não em achismos, priorizando usabilidade, acessibilidade e segurança dos dados utilizando Cloud. A seguir, estão descritas as funcionalidades atualmente implementadas.
+
+\subsection{Tela Inicial: Escolha entre Login e Criar Conta}
+
+A primeira tela da aplicação apresenta ao usuário duas opções principais: Login ou Cadastro de usuário. Essa tela tem o objetivo de guiar o fluxo inicial da navegação e auxiliar no entendimento do próximo passo a ser dado. A interface é visualmente limpa e intuitiva, com botões destacados que conduzem às telas de autenticação.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Tela inicial com opções de Login e Criar Conta.}
+  \includegraphics[width=0.85\textwidth]{figures/login-page.png}
+  \label{fig:login-page}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\subsection{Criação de Conta}
+
+A tela de cadastro permite que o usuário crie uma conta informando .... O formulário conta com validações em tempo reale e uma interface simples e intuitiva...
+
+Figuras + Legenda
+
+\subsection{Dashboard}
+
+A tela de dashboard do aplicativo apresenta as principais métricas à serem analisadas, como:
+
+\begin{itemize}
+    \item Orçamentos do mês
+    \item Taxa de conversão
+    \item Faturamento estimado
+    \item Ticket Médio
+    \item Gráfico com orçamentos nos últimos 30 dias.
+    \item Gráfico de barra comparando aprovados e rejeitados nos últimos 6 meses.
+    \item Três clientes mais recentes.
+    \item Top 5 clientes por valor orçado.
+\end{itemize}
+
+Figuras + Legenda
+
+\subsection{Página de Clientes}
+
+A tela de cadastro permite que o usuário crie uma conta informando .... O formulário conta com validações em tempo reale e uma interface simples e intuitiva...
+
+Figuras + Legenda
+
+\subsection{Criação de Cliente}
+
+Figura 8 AQUI
+
+Um botão de ação "Novo cliente", posicionado no canto superior direito da tela de clientes (como pode ser visto na Figura 8), permite a inserção de um novo cliente. O usuário deve preencher um formulário preenchendo os seguintes dados:
+
+\begin{itemize}
+    \item Nome Completo 
+    \item E-mail
+    \item Telefone
+    \item Documento
+    \item Endereço Completo
+\end{itemize}
+
+Ao preencher, ele é adicionado ao grid, como pode ser visto na figura abaixo (Figura 9)
+
+Figura 9 AQUI
+
+A Tabela 1 apresenta o caso de uso
+
+\section{Integrações externas}
+
+Para garantir uma experiência completa e moderna, o aplicativo Onmarmoraria faz uso de integrações com serviços externos que complementam suas funcionalidades principais. As integrações foram implementadas visando otimizar os processos, melhorando a segurança e simplificando os processos críticos, como pagamento e gerenciamento de arquivos multimídia.
+
+\subsection{GCS para Armazenamento de Imagens}
+
+Para garantir uma experiência completa e moderna, o aplicativo Onmarmoraria faz uso de integrações com serviços externos que complementam suas funcionalidades principais. As integrações foram implementadas visando otimizar os processos, melhorando a segurança e simplificando os processos críticos, como pagamento e gerenciamento de arquivos multimídia.
+
+\subsection{Alguma outra caso seja necessário}
+
+Adicionar texto explicando para que serve e porque foi adicionada tal integração.
+
+
+

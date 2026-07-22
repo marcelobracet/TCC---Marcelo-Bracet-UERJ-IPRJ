@@ -1,0 +1,63 @@
+% Workaround para criação de capítulo não-numerado alinhado à margem
+\chapter*{}
+\noindent
+\phantomsection{\MakeUppercase{\textbf{Introdução}}}
+\addcontentsline{toc}{chapter}{INTRODUÇÃO}
+
+% \newline
+% \newline
+
+%\section{Motivação}
+
+\vspace{1.4cm}
+
+
+A gestão de processos desempenha um papel essencial para a competitividade das empresas no cenário contemporâneo. Mais do que registrar informações, os sistemas digitais tornaram-se o elo que conecta setores internos, clientes e fornecedores, atuando como a espinha dorsal operacional de muitos negócios. Segundo Davenport (1998), processos bem-estruturados e apoiados por tecnologia elevam a eficiência organizacional, reduzem erros, diminuem custos e ampliam a capacidade de tomada de decisão. Nesse contexto, os Sistemas Integrados de Gestão Empresarial (ERP) consolidam-se como ferramentas indispensáveis para organizações que buscam otimizar fluxos de trabalho, garantir padronização e aumentar sua produtividade.
+
+Entretanto, embora ERPs sejam amplamente difundidos em grandes empresas, muitos setores tradicionais ainda apresentam dificuldades para adotar soluções tecnológicas eficientes, seja por limitações financeiras, seja pela falta de sistemas realmente adaptados às suas realidades. A indústria da marmoraria é um exemplo claro dessa lacuna. Apesar de lidar diariamente com operações complexas — como orçamentos detalhados, medição de peças, controle de produção, logística, estoque de chapas e atendimento ao cliente — grande parte das marmorarias brasileiras ainda depende de processos manuais, planilhas descentralizadas e comunicação informal entre equipes.
+
+Essa fragmentação operacional gera retrabalhos, atrasos, perda de informações e baixa previsibilidade. De acordo com Slack, Chambers e Johnston (2008), falhas de comunicação são um dos principais fatores responsáveis por desperdícios e gargalos em operações. No caso das marmorarias, isso significa desde erros em medidas e pedidos até falhas de agendamento e desorganização na produção, comprometendo a experiência do cliente e a rentabilidade da empresa.
+
+Ao mesmo tempo, vivemos uma fase em que empresas de todos os portes buscam digitalizar sua administração de forma prática e acessível. A facilidade proporcionada por sistemas em nuvem, APIs modernas, pipelines automatizados e arquiteturas escaláveis cria um ambiente muito mais favorável para que pequenos negócios adotem soluções antes inacessíveis. Como defendem Pressman e Maxim (2016), o desenvolvimento de software orientado à eficiência e escalabilidade democratiza o acesso tecnológico e permite transformar rotinas antes limitadas por processos analógicos.
+
+Percebendo esse cenário, este trabalho propõe o desenvolvimento de um ERP voltado especificamente para marmorarias, construído com tecnologias modernas e práticas de engenharia de software atuais. O sistema inclui autenticação segura baseada em JWT, interface web, landing page institucional e um pipeline de CI/CD integrado ao GCP, garantindo implantação contínua e armazenamento de imagens utilizando o GHCR (Github Container Registry). Essa abordagem busca aproximar a realidade operacional das marmorarias da maturidade digital presente em outros setores, entregando um sistema acessível, leve e eficiente.
+
+A solução desenvolvida visa reduzir ruídos de comunicação, centralizar informações, padronizar processos e oferecer uma visão clara da operação para gestores e colaboradores. Ao integrar orçamentos, pedidos, produção e entregas em um fluxo contínuo, o ERP pretende não só otimizar a rotina diária, mas transformar a forma como marmorarias operam, conectando-as a um modelo mais moderno e competitivo.
+    
+\vspace{0.5cm}
+\textbf{Objetivo}
+\vspace{0.5cm}
+
+O objetivo deste trabalho é desenvolver um ERP totalmente voltado para as necessidades operacionais de marmorarias, oferecendo uma plataforma centralizada que otimize processos como orçamento, controle de produção, gerenciamento de pedidos, registro de clientes, acompanhamento de serviços e organização do fluxo interno de trabalho. A proposta busca substituir métodos manuais, fragmentados e suscetíveis a erro por uma solução moderna, escalável e segura, capaz de elevar o nível de eficiência e confiabilidade dessas empresas.
+
+Além da construção das funcionalidades essenciais do ERP, este projeto tem como finalidade demonstrar a aplicação prática de tecnologias atuais de desenvolvimento, incluindo autenticação baseada em JWT, conteinerização via Docker, integração e entrega contínuas (CI/CD) e implantação automatizada na GCP, utilizando o GHCR como repositório de imagens privadas. Dessa forma, o sistema não apenas atende às demandas do setor, mas também incorpora boas práticas de engenharia de software alinhadas ao estado da arte, reforçando a importância da modernização tecnológica aplicada a pequenos negócios.
+
+A relevância deste trabalho encontra-se na criação de uma solução tecnológica acessível, eficiente e especializada para um nicho que historicamente carece de ferramentas adequadas. Apesar de lidarem com processos extremamente detalhados - como medições precisas, cálculos de cortes, gestão de chapas, etapas de acabamento e prazos de entrega — muitas marmorarias ainda operam com planilhas, anotações avulsas ou sistemas genéricos que não contemplam suas particularidades. Tal realidade gera inconsistências operacionais, redução da produtividade e aumento de custos, prejudicando a competitividade dessas empresas no mercado. O presente projeto busca, portanto, preencher essa lacuna ao oferecer um sistema realmente alinhado ao fluxo de trabalho do setor.
+
+Do ponto de vista empresarial, um ERP especializado representa uma oportunidade clara de reduzir retrabalhos, padronizar informações, aumentar a previsibilidade da produção e melhorar a relação com clientes. Em um segmento em que erros de medida podem gerar perdas financeiras significativas, a centralização de dados e a automatização de processos tornam-se fatores determinantes para o sucesso. Assim, este trabalho reforça a importância da digitalização como estratégia de crescimento sustentável, permitindo que marmorarias alcancem níveis mais altos de organização e performance.
+
+Sob a perspectiva técnica e acadêmica, o desenvolvimento deste projeto contribui para o entendimento prático de como arquiteturas modernas podem ser aplicadas em sistemas corporativos reais. O uso de pipelines automatizadas, infraestrutura em nuvem e práticas de segurança atualizadas serve como referência para desenvolvedores e pesquisadores interessados em soluções escaláveis. Além disso, o projeto evidencia a viabilidade de construir sistemas robustos mesmo em contextos de pequenas empresas, democratizando o acesso a tecnologias antes restritas a grandes organizações.
+
+Outro aspecto relevante é a abordagem modular e escalável adotada na construção do sistema. O ERP foi projetado de forma a permitir expansões futuras, como integração com APIs de pagamento, módulos de logística e dashboards analíticos. Essa preocupação com a evolução contínua reforça a longevidade da solução e sua capacidade de acompanhar as necessidades das marmorarias à medida que o setor continua se transformando digitalmente. A arquitetura implementada facilita futuras melhorias, garantindo que novas funcionalidades possam ser adicionadas sem comprometer a estabilidade do sistema.
+
+Dessa forma, este trabalho não se limita apenas ao desenvolvimento de um software funcional, mas apresenta também uma proposta de transformação operacional para o segmento de marmorarias.
+
+\vspace{0.5cm}
+\textbf{Estrutura do Trabalho}
+\vspace{0.5cm}
+
+O Capítulo 1 apresenta uma revisão bibliográfica e uma revisão aprofundada da literatura relacionada aos temas centrais do trabalho.
+
+O Capítulo 2 explora, de forma técnica e organizada, todos os conceitos necessários para compreender a construção do sistema.
+
+O Capítulo 3 descreve a metodologia utilizada e detalha o processo de desenvolvimento do ERP.
+
+O Capítulo 4 apresenta o que foi alcançado com o projeto.
+
+Por fim, o Capítulo 5 traz as conclusões, dando ênfase nas contribuições do projeto e apontando perspectivas para possíveis aprimoramentos futuros na aplicação.
+
+
+
+
+\vspace{10mm} %5mm vertical space
+
