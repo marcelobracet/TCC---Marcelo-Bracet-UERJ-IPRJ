@@ -16,7 +16,7 @@ O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e am
 \item \textbf{Backend:} linguagem Go, \textit{framework} Gin para HTTP e GORM como ORM para persistência no PostgreSQL. Autenticação com JWT (\textit{access token} e \textit{refresh token}) e senhas com bcrypt.
 \item \textbf{Banco de Dados:} PostgreSQL 15, escolhido por robustez, propriedades ACID e adequação a dados relacionais de clientes, produtos e orçamentos.
 \item \textbf{Infraestrutura e Deploy:} Google Cloud Compute Engine (VM) para API e banco em Docker Compose; Vercel para o frontend; GHCR para imagens Docker da API; GCS para mídias (logo, avatar e produtos) via URLs assinadas; CI/CD com GitHub Actions.
-\item \textbf{Ferramentas complementares:} Docker, GitHub, Postman (validação de rotas) e, opcionalmente, integração com AbacatePay para checkout de assinaturas SaaS.
+\item \textbf{Ferramentas complementares:} Docker, GitHub, Postman (validação de rotas) e a landing page institucional (Next.js) para marketing e captura de leads.
 \end{itemize}
 
 \section{Etapas do Desenvolvimento}
@@ -30,11 +30,11 @@ Além da definição de requisitos, o planejamento envolveu a escolha das tecnol
 \subsection{Estruturação da Arquitetura}
 A fase de estruturação da arquitetura concentrou-se na organização interna do sistema, incluindo camadas, módulos, estratégias de comunicação e padrões de desenvolvimento. Adotou-se um monólito modular inspirado na \textit{Clean Architecture}, com separação entre domínio, casos de uso, entrega HTTP e infraestrutura.
 
-O backend foi organizado em módulos responsáveis por autenticação, \textit{tenants}, usuários, clientes, produtos, orçamentos, configurações, auditoria, \textit{uploads} e cobrança. A comunicação com o frontend ocorre por API REST sob o prefixo \texttt{/api/v1}. No frontend, o Next.js (App Router) organiza rotas, componentes e serviços de consumo da API. Na camada de dados, o PostgreSQL e o GORM sustentam o modelo relacional. Versionamento, Docker e pipeline de CI/CD fecham o ciclo de entrega.
+O backend foi organizado em módulos responsáveis por autenticação, \textit{tenants}, usuários, clientes, produtos, orçamentos, configurações, auditoria, \textit{uploads} e lista de espera (\textit{waitlist}) da landing page. A comunicação com o frontend ocorre por API REST sob o prefixo \texttt{/api/v1}. No frontend, o Next.js (App Router) organiza rotas, componentes e serviços de consumo da API. Na camada de dados, o PostgreSQL e o GORM sustentam o modelo relacional. Versionamento, Docker e pipeline de CI/CD fecham o ciclo de entrega.
 
 \subsection{Desenvolvimento do Backend}
 
-A construção do \textit{backend} teve início com a definição das entidades de domínio que representam o núcleo do sistema de gestão para marmorarias, entre elas: \textit{tenant} (empresa), usuário, cliente, produto, orçamento, configurações, planos de assinatura e registros de auditoria. A API foi desenvolvida na linguagem Go, utilizando o \textit{framework} Gin para o tratamento de requisições HTTP e o GORM como ORM (\textit{Object-Relational Mapping}) para persistência no banco de dados relacional PostgreSQL.
+A construção do \textit{backend} teve início com a definição das entidades de domínio que representam o núcleo do sistema de gestão para marmorarias, entre elas: \textit{tenant} (empresa), usuário, cliente, produto, orçamento, configurações, leads da lista de espera e registros de auditoria. A API foi desenvolvida na linguagem Go, utilizando o \textit{framework} Gin para o tratamento de requisições HTTP e o GORM como ORM (\textit{Object-Relational Mapping}) para persistência no banco de dados relacional PostgreSQL.
 
 A organização do código seguiu uma arquitetura em camadas inspirada na \textit{Clean Architecture}, com separação entre domínio (\texttt{domain}), casos de uso (\texttt{usecase}), entrega HTTP (\texttt{delivery/http}) e infraestrutura (\texttt{infra}). Essa divisão permite isolar as regras de negócio das dependências externas, facilitando manutenção, testes e evolução do sistema.
 
@@ -49,7 +49,7 @@ Foram implementados \textit{endpoints} sob o prefixo \texttt{/api/v1} para:
   \item Configurações da empresa (dados cadastrais e logo);
   \item \textit{Upload} de arquivos (logo, avatar e imagens de produto) via URLs assinadas no GCS;
   \item Consulta de auditoria e exportação básica de relatórios de produtos;
-  \item Cobrança/assinatura (status, \textit{checkout} e \textit{webhook} AbacatePay), mantendo o bloqueio por assinatura desativado na demonstração do TCC;
+  \item Cadastro público na lista de espera (landing page), persistido no PostgreSQL;
   \item \textit{Healthchecks} (\texttt{/health}, \texttt{/liveness}, \texttt{/readiness}) para monitoramento em produção.
 \end{itemize}
 
@@ -73,7 +73,7 @@ O desenvolvimento da interface web priorizou usabilidade, responsividade e compa
 
 A tipagem estática com TypeScript e a estilização com Tailwind CSS contribuíram para um código mais seguro e consistente, além de uma interface adaptável a diferentes resoluções de tela. A comunicação com a API REST foi implementada por meio da biblioteca Axios, com interceptores responsáveis por anexar o token JWT às requisições e renovar a sessão de forma silenciosa quando o \textit{access token} expira. Os tokens são persistidos no navegador e utilizados para manter o usuário autenticado entre recarregamentos da página.
 
-As principais funcionalidades implementadas no \textit{frontend} incluem: autenticação (\textit{login} e cadastro/\textit{provision} da empresa), painel inicial com indicadores e gráficos (agregados no navegador a partir das listas da API), gestão de clientes, produtos e orçamentos, edição de perfil, configurações da empresa (dados cadastrais, logo e cobrança/assinatura) e controle de acesso por papel/permissão. Componentes reutilizáveis --- formulários, tabelas, \textit{modals}, campos de \textit{upload} e layout do painel --- foram adotados para reduzir duplicação e padronizar a experiência do usuário.
+As principais funcionalidades implementadas no \textit{frontend} incluem: autenticação (\textit{login} e cadastro/\textit{provision} da empresa), painel inicial com indicadores e gráficos (agregados no navegador a partir das listas da API), gestão de clientes, produtos e orçamentos, edição de perfil, configurações da empresa (dados cadastrais e logo) e controle de acesso por papel/permissão. Componentes reutilizáveis --- formulários, tabelas, \textit{modals}, campos de \textit{upload} e layout do painel --- foram adotados para reduzir duplicação e padronizar a experiência do usuário.
 
 O fluxo de navegação da aplicação é apresentado na Figura~\ref{fig:estrutura-navegacao-app-router}. Após o acesso inicial, o usuário realiza autenticação; em seguida, é direcionado ao \textit{dashboard}, de onde pode navegar para os módulos de clientes, produtos, orçamentos e configurações.
  
@@ -116,7 +116,6 @@ No \textit{backend}, a validação automatizada foi implementada com o pacote pa
   \item autenticação e emissão/validação de tokens JWT, incluindo geração de \textit{access token} e \textit{refresh token};
   \item hashing e verificação de senhas com bcrypt;
   \item \textit{provision} de \textit{tenant} com criação do usuário administrador e associação ao plano selecionado;
-  \item elegibilidade de uso (\textit{entitlement}) com base em período de teste e assinatura ativa;
   \item validação de documentos (CNPJ), incluindo normalização de máscaras e rejeição de valores inválidos;
   \item \textit{middleware} de autenticação e autorização por papel (\textit{role}), utilizando \texttt{httptest} e contexto de teste do Gin.
 \end{itemize}
@@ -127,7 +126,11 @@ Essa combinação de testes manuais e automatizados permitiu verificar a corretu
 
 \section{Funcionalidades da Aplicação}
 
-O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de pequenas marmorarias por meio de uma interface moderna, intuitiva e amigável. A plataforma busca centralizar dados operacionais e apoiar decisões com base em indicadores do painel, priorizando usabilidade e segurança dos dados na nuvem. A seguir, estão descritas as funcionalidades atualmente implementadas.
+O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de pequenas marmorarias por meio de uma interface moderna, intuitiva e amigável. A plataforma busca centralizar dados operacionais e apoiar decisões com base em indicadores do painel, priorizando usabilidade e segurança dos dados na nuvem. A seguir, estão descritas as funcionalidades atualmente implementadas, começando pela landing page de marketing e, em seguida, pelo painel administrativo.
+
+\subsection{Landing page institucional}
+
+Antes do acesso ao painel, o projeto conta com uma landing page voltada ao marketing do Onmarmoraria. Essa página apresenta a proposta de valor do ERP, funcionalidades previstas e um formulário de lista de espera. O objetivo é comunicar o produto a marmorarias e coletar informações de contato e perfil operacional (porte e volume de orçamentos), armazenadas no banco de dados do backend. A Figura~\ref{fig:landing-page} ilustra a página.
 
 \subsection{Tela Inicial: Escolha entre Login e Criar Conta}
 
@@ -192,7 +195,7 @@ O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com
 
 \subsection{Configurações e Perfil}
 
-Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado no GCS), gerencia usuários do \textit{tenant} e consulta/aciona a cobrança de assinatura (status, sincronização e \textit{checkout} AbacatePay). No perfil, o usuário pode atualizar informações pessoais e avatar.
+Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado no GCS) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
 
 \section{Integrações externas}
 
@@ -202,9 +205,21 @@ Para complementar as funcionalidades principais, o Onmarmoraria utiliza serviço
 
 O Google Cloud Storage foi integrado para armazenar logo da empresa, avatar de usuários e imagens de produtos. A API não recebe o arquivo binário: ela assina URLs de PUT/GET (esquema V4) e o navegador envia/baixa o objeto diretamente. O \textit{bucket} permanece privado; apenas a referência (\texttt{object\_key}) é persistida no banco. Sem as variáveis \texttt{GCS\_BUCKET} e credenciais da conta de serviço, o \textit{endpoint} de assinatura responde HTTP 503, e o painel pode operar com URL manual em configurações.
 
-\subsection{AbacatePay (assinaturas SaaS)}
+\subsection{Landing page e lista de espera}
 
-A API possui integração com o AbacatePay para criação de \textit{checkout} de assinatura, consulta de status e recebimento de \textit{webhooks}. O painel expõe a aba de cobrança para o administrador. No escopo da demonstração acadêmica, o \textit{middleware} de bloqueio por assinatura ativa permanece desabilitado na API para não impedir o uso durante a apresentação; a infraestrutura de cobrança, contudo, está implementada e configurável por variáveis de ambiente.
+Foi desenvolvida uma landing page institucional (repositório separado) para divulgação do Onmarmoraria e captura de interesse de marmorarias. O formulário coleta nome, WhatsApp, estado, porte da equipe e volume médio de orçamentos. Os dados são enviados à API por \texttt{POST /api/v1/waitlist} e persistidos na tabela \texttt{waitlist\_leads} do PostgreSQL do próprio projeto. Em caso de WhatsApp já cadastrado, a API responde HTTP 409, e a interface informa o usuário.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Landing page institucional do Onmarmoraria.}
+  \includegraphics[width=0.95\textwidth]{figures/landing-page.png}
+  \label{fig:landing-page}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+A seção de planos na landing descreve uma diferenciação futura por porte da marmoraria; nesta fase acadêmica o acesso ao ERP permanece aberto para demonstração, sem cobrança nem limitação de funcionalidades por assinatura.
 
 \subsection{GHCR e GitHub Actions (entrega contínua)}
 

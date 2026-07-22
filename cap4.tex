@@ -16,6 +16,10 @@ Os repositórios e componentes principais do projeto estão disponíveis em:
 
 Os testes foram conduzidos em ambiente local (macOS com Docker Compose para API e PostgreSQL) e em navegadores desktop (Chrome/Safari), além de verificações de responsividade em dispositivos móveis. O frontend foi exercitado com \texttt{next dev}/\texttt{next build}; o backend com \texttt{go test ./...} e chamadas manuais via Postman e pelo próprio painel.
 
+\section{Landing page e captura de leads}
+
+A landing page foi validada quanto à navegação e ao envio do formulário de lista de espera. Com a API em execução, o \texttt{POST /api/v1/waitlist} persiste o lead no PostgreSQL; reenvios com o mesmo WhatsApp retornam conflito (HTTP 409). A Figura~\ref{fig:landing-page} documenta a interface pública usada para marketing do projeto.
+
 \section{Testes Funcionais}
 
 \subsection{Autenticação e Provision}
@@ -38,7 +42,7 @@ A separação entre frontend (Vercel), API+PostgreSQL (VM com Docker Compose), G
 
 \begin{itemize}
   \item Não há módulo completo de estoque de chapas/retalhos na versão atual --- o MVP concentra-se em clientes, produtos e orçamentos;
-  \item A cobrança AbacatePay (API + aba no painel) está implementada, porém o bloqueio de rotas por assinatura permanece desabilitado na demonstração do TCC;
+  \item Diferenciação comercial por planos (limites de usuários/recursos) ficou como trabalho futuro; no MVP o acesso é aberto;
   \item Testes E2E automatizados no frontend ainda não foram adotados como suíte principal;
   \item A landing page vive em repositório separado do painel administrativo.
 \end{itemize}
