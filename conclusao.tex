@@ -5,6 +5,22 @@
 \newline
 \newline
 
-Aqui vai a conclusão do trabalho, recapitulando o que foi desenvolvido e os benefícios promovidos pelo que foi desenvolvido no trabalho. 
+Este trabalho apresentou o desenvolvimento do Onmarmoraria, um ERP web multi-\textit{tenant} voltado à digitalização de processos em marmorarias. Foram integrados conhecimentos de engenharia de software, APIs REST, autenticação JWT, computação em nuvem e entrega contínua, resultando em uma solução funcional alinhada às necessidades de cadastro de clientes, catálogo de produtos e gestão de orçamentos.
 
-Em seguida, falar sobre possíveis trabalhos futuros ou continuações do trabalho.
+A arquitetura adotada --- monólito modular em Go, frontend Next.js, PostgreSQL, Docker, GHCR, GitHub Actions, Compute Engine e GCS --- privilegiou reprodutibilidade, segurança (bucket privado com URLs assinadas) e baixo custo operacional, viabilizando a subida em produção sem depender de serviços caros nesta fase. Os testes automatizados do backend e as validações manuais do painel indicam estabilidade dos fluxos críticos para demonstração acadêmica e uso inicial por pequenas marmorarias.
+
+Para além do aspecto técnico, o projeto contribui ao oferecer uma base concreta de digitalização para um setor que ainda opera, em muitos casos, com planilhas e controles fragmentados. O Onmarmoraria não pretende esgotar todas as particularidades do chão de fábrica, mas entregar um núcleo operacional útil e expansível.
+
+A conclusão deste projeto não representa um ponto final, e sim a consolidação de um MVP pronto para evolução. Entre os principais trabalhos futuros, destacam-se:
+
+\begin{itemize}
+  \item Validação com usuários reais (donos e colaboradores de marmorarias) para medir usabilidade e impacto operacional;
+  \item Módulo de estoque de chapas e retalhos, com rastreabilidade de matéria-prima;
+  \item Ativação plena da cobrança SaaS (AbacatePay) com bloqueio por assinatura em produção comercial;
+  \item Ampliação de testes automatizados (incluindo E2E no frontend) e observabilidade em produção;
+  \item Aprofundamento de relatórios gerenciais e exportações;
+  \item Adequações à LGPD (políticas de retenção, consentimento e exclusão de dados);
+  \item Evolução da landing page e do funil de aquisição alinhados ao produto.
+\end{itemize}
+
+Conclui-se, portanto, que o Onmarmoraria constitui um protótipo funcional e escalável, com potencial de impacto real no cotidiano de marmorarias, desde que acompanhado de testes com usuários, continuidade de desenvolvimento e operação responsável na nuvem.

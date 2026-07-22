@@ -1,2 +1,46 @@
 \chapter{RESULTADOS E DISCUSSÃO}
 
+Este capítulo apresenta uma análise dos resultados obtidos ao longo do desenvolvimento do ERP Onmarmoraria. Embora o projeto não tenha passado por um estudo formal de usabilidade com amostra estatística de marmorarias, foram realizados testes manuais no painel web, validações de API e execução da suíte automatizada do backend. A proposta é discutir o comportamento prático do sistema, os desafios enfrentados, as soluções adotadas e as limitações conhecidas, em alinhamento com os objetivos definidos na introdução.
+
+\section{Links do Projeto}
+
+Os repositórios e componentes principais do projeto estão disponíveis em:
+
+\begin{itemize}
+  \item Frontend (painel): \url{https://github.com/marcelobracet/erp-dashboard-v1}
+  \item Backend (API): \url{https://github.com/marcelobracet/erp-api-tcc}
+  \item Landing page institucional: \url{https://github.com/marcelobracet/lp-erp-marmoraria}
+\end{itemize}
+
+\section{Ambiente de Testes}
+
+Os testes foram conduzidos em ambiente local (macOS com Docker Compose para API e PostgreSQL) e em navegadores desktop (Chrome/Safari), além de verificações de responsividade em dispositivos móveis. O frontend foi exercitado com \texttt{next dev}/\texttt{next build}; o backend com \texttt{go test ./...} e chamadas manuais via Postman e pelo próprio painel.
+
+\section{Testes Funcionais}
+
+\subsection{Autenticação e Provision}
+
+O fluxo de \textit{login} com e-mail e senha, emissão de JWT e renovação silenciosa do \textit{access token} via \textit{refresh token} foi validado com sucesso. O \textit{provision} cria \textit{tenant}, administrador e configurações iniciais em uma única operação. Cenários de senha inválida, CNPJ inválido e e-mail malformado retornaram mensagens claras no frontend.
+
+\subsection{Dashboard e Módulos de Negócio}
+
+O painel exibiu corretamente indicadores de orçamentos, conversão, faturamento estimado e ticket médio, além dos gráficos e rankings, todos calculados no navegador a partir dos dados da API. Os módulos de clientes, produtos e orçamentos permitiram CRUD autenticado com isolamento por \textit{tenant}. A atualização de status de orçamento (comercial e de obra) e a tela de impressão foram verificadas manualmente.
+
+\subsection{Upload de Mídias (GCS)}
+
+Com \texttt{GCS\_BUCKET} e credenciais configurados, o fluxo de URL assinada funcionou para logo, avatar e imagem de produto: o navegador envia o arquivo diretamente ao bucket privado e a aplicação persiste apenas o \texttt{object\_key}. Sem configuração de GCS, a API responde HTTP 503 no endpoint de assinatura, comportamento esperado e documentado.
+
+\section{Arquitetura e Entrega Contínua}
+
+A separação entre frontend (Vercel), API+PostgreSQL (VM com Docker Compose), GHCR (imagens Docker) e GCS (mídias) mostrou-se adequada ao MVP. O pipeline GitHub Actions reduz risco de deploy manual. A decisão por Compute Engine \texttt{e2-micro} (em vez de Cloud SQL/GKE) privilegia custo baixo sem impedir demonstração em produção.
+
+\section{Limitações Observadas}
+
+\begin{itemize}
+  \item Não há módulo completo de estoque de chapas/retalhos na versão atual --- o MVP concentra-se em clientes, produtos e orçamentos;
+  \item A cobrança AbacatePay (API + aba no painel) está implementada, porém o bloqueio de rotas por assinatura permanece desabilitado na demonstração do TCC;
+  \item Testes E2E automatizados no frontend ainda não foram adotados como suíte principal;
+  \item A landing page vive em repositório separado do painel administrativo.
+\end{itemize}
+
+Essas limitações não invalidam os objetivos do trabalho; ao contrário, delimitam com clareza o escopo entregue e as oportunidades de evolução descritas na conclusão.

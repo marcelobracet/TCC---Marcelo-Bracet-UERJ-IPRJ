@@ -42,10 +42,10 @@
 
 \setlength{\parindent}{1.3cm}
 
-Este trabalho apresenta o desenvolvimento de um sistema ERP voltado para marmorarias, com o objetivo de otimizar a gestão de processos internos, controle de estoque, pedidos de clientes e fluxo de produção. A metodologia adotada incluiu levantamento de requisitos junto a empresas do setor, modelagem de banco de dados, implementação de funcionalidades de controle, estoque, além de testes de usabilidade com usuários finais. Para garantir alta escalabilidade, disponibilidade e resiliência do sistema, a aplicação foi implementada utilizando alguns recursos da Google Cloud Platform, permitindo expansão conforme a demanda e minimizando riscos de interrupções.
+Este trabalho apresenta o desenvolvimento do Onmarmoraria, um sistema ERP multi-tenant voltado para marmorarias, com o objetivo de centralizar a gestão de clientes, produtos e orçamentos em um painel web. A metodologia envolveu levantamento de requisitos do setor, modelagem de dados, implementação de API REST em Go com autenticação JWT, frontend em Next.js e testes automatizados e manuais. A infraestrutura utiliza Google Cloud Platform (Compute Engine e Cloud Storage), Docker, GHCR, GitHub Actions e Vercel, priorizando baixo custo operacional e implantação contínua. O armazenamento de mídias ocorre no GCS por URLs assinadas, enquanto as imagens Docker da API são versionadas no GHCR.
 
 \vspace{\onelineskip}
-\noindent Palavras-chave:  ERP; Marmoraria; Gestão de Estoque; Computação em nuvem; Google Cloud Plataform.
+\noindent Palavras-chave: ERP; Marmoraria; Orçamentos; Computação em nuvem; Google Cloud Platform.
 
 \end{SingleSpace}
 \end{resumo}
