@@ -106,6 +106,7 @@ A Figura~\ref{fig:fluxo-cliente-servidor} ilustra o fluxo de comunicação entre
 No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao Google Cloud Storage (GCS) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL assinada de leitura. Essa estratégia mantém o \textit{bucket} privado, reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário.
 
 \subsection{Testes e Validação}
+\label{sec:testes-e-validacao-cap3}
 
 Durante o desenvolvimento, a validação do sistema combinou testes manuais da interface web e testes automatizados no \textit{backend}, com foco em regras de negócio, autenticação e consistência das respostas da API.
 
@@ -132,23 +133,23 @@ O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de peque
 
 Antes do acesso ao painel, o projeto conta com uma landing page voltada ao marketing do Onmarmoraria. Essa página apresenta a proposta de valor do ERP, funcionalidades previstas e um formulário de lista de espera. O objetivo é comunicar o produto a marmorarias e coletar informações de contato e perfil operacional (porte e volume de orçamentos), armazenadas no banco de dados do backend. A Figura~\ref{fig:landing-page} ilustra a página.
 
-\subsection{Tela Inicial: Escolha entre Login e Criar Conta}
+\subsection{Tela Inicial de Login}
 
-A primeira tela da aplicação apresenta ao usuário as opções de \textit{login} ou criação de conta da marmoraria (\textit{provision}). Essa tela guia o fluxo inicial da navegação. A interface é visualmente limpa, com botões destacados que conduzem às telas de autenticação.
+A primeira tela da aplicação apresenta o formulário de \textit{login}, guiando o fluxo inicial de navegação. Nesta fase de desenvolvimento descrita no presente capítulo, a tela também oferecia um atalho de criação de conta da marmoraria (\textit{provision}) diretamente pelo painel, ilustrado na Figura~\ref{fig:login-page}. Conforme discutido no Capítulo~\ref{cap5Discussao}, esse atalho de autoatendimento foi posteriormente removido, por não corresponder ao modelo de operação pretendido para o produto.
 
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
-  \caption{Tela inicial com opções de Login e Criar Conta.}
+  \caption{Tela inicial com opções de Login e Criar Conta (versão anterior à revisão de escopo descrita no Capítulo~\ref{cap5Discussao}).}
   \includegraphics[width=0.85\textwidth]{figures/login-page.png}
   \label{fig:login-page}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-\subsection{Criação de Conta (Provision da Empresa)}
+\subsection{Criação de Conta (\textit{Provision} da Empresa)}
 
-A tela de cadastro permite criar a marmoraria e o usuário administrador em uma única operação. São solicitados: nome da empresa, CNPJ (opcional, com validação), nome do administrador, e-mail e senha (mínimo de oito caracteres). Em caso de sucesso, o sistema autentica o usuário e redireciona ao \textit{dashboard}; quando a verificação de e-mail está habilitada, é exibida mensagem orientando a confirmação do endereço informado.
+O \textit{provision} cria a marmoraria e o usuário administrador em uma única operação. São solicitados: nome da empresa, CNPJ (opcional, com validação), nome do administrador, e-mail e senha (mínimo de oito caracteres). Em caso de sucesso, o sistema autentica o usuário e redireciona ao \textit{dashboard}; quando a verificação de e-mail está habilitada, é exibida mensagem orientando a confirmação do endereço informado. Na versão atual do sistema, essa operação é acionada pelo operador da plataforma diretamente via API, e não mais por uma tela de autoatendimento público (Capítulo~\ref{cap5Discussao}).
 
 \subsection{Dashboard}
 

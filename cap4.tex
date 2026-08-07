@@ -1,6 +1,6 @@
-\chapter{RESULTADOS E DISCUSSÃO}
+\chapter{RESULTADOS}\label{cap4Resultados}
 
-Este capítulo apresenta uma análise dos resultados obtidos ao longo do desenvolvimento do ERP Onmarmoraria. Embora o projeto não tenha passado por um estudo formal de usabilidade com amostra estatística de marmorarias, foram realizados testes manuais no painel web, validações de API e execução da suíte automatizada do backend. A proposta é discutir o comportamento prático do sistema, os desafios enfrentados, as soluções adotadas e as limitações conhecidas, em alinhamento com os objetivos definidos na introdução.
+Este capítulo apresenta os resultados obtidos na validação do ERP Onmarmoraria: testes funcionais do painel e da API, uma rodada completa de testes de ponta a ponta contra o ambiente de produção (após a retomada da máquina virtual na Google Cloud Platform), medições de desempenho sob carga, indicadores objetivos de qualidade de código e a verificação do \textit{pipeline} de integração e entrega contínuas. A discussão desses resultados, o alcance dos objetivos e as limitações observadas são apresentados no Capítulo~\ref{cap5Discussao}.
 
 \section{Links do Projeto}
 
@@ -10,41 +10,86 @@ Os repositórios e componentes principais do projeto estão disponíveis em:
   \item Frontend (painel): \url{https://github.com/marcelobracet/erp-dashboard-v1}
   \item Backend (API): \url{https://github.com/marcelobracet/erp-api-tcc}
   \item Landing page institucional: \url{https://github.com/marcelobracet/lp-erp-marmoraria}
+  \item API em produção: \url{https://api.onmarmoraria.com.br}
 \end{itemize}
 
 \section{Ambiente de Testes}
 
-Os testes foram conduzidos em ambiente local (macOS com Docker Compose para API e PostgreSQL) e em navegadores desktop (Chrome/Safari), além de verificações de responsividade em dispositivos móveis. O frontend foi exercitado com \texttt{next dev}/\texttt{next build}; o backend com \texttt{go test ./...} e chamadas manuais via Postman e pelo próprio painel.
+Os testes foram conduzidos em dois ambientes complementares. O primeiro, local (macOS, Docker Compose para API e PostgreSQL, \texttt{next dev} para o painel), permitiu iteração rápida durante o desenvolvimento e a execução de testes de carga controlados, sem a variável de latência de rede. O segundo, o ambiente de produção propriamente dito --- uma máquina virtual \texttt{e2-micro} na Google Cloud Platform (\textit{zona} \texttt{us-central1-a}), executando a API, o PostgreSQL e um \textit{proxy} reverso Nginx com certificado TLS via Let's Encrypt, todos em contêineres Docker --- foi utilizado para a validação final de ponta a ponta, incluindo o \textit{pipeline} de \textit{deploy} e o comportamento real da aplicação sob o domínio público.
 
-\section{Landing page e captura de leads}
-
-A landing page foi validada quanto à navegação e ao envio do formulário de lista de espera. Com a API em execução, o \texttt{POST /api/v1/waitlist} persiste o lead no PostgreSQL; reenvios com o mesmo WhatsApp retornam conflito (HTTP 409). A Figura~\ref{fig:landing-page} documenta a interface pública usada para marketing do projeto.
+Um ponto relevante do processo foi justamente a diferença entre os dois ambientes: alguns comportamentos validados manualmente durante o desenvolvimento (Seção~\ref{sec:testes-e-validacao-cap3}, do Capítulo~\ref{cap3MatMet}) não se confirmaram integralmente quando o sistema foi exercitado de ponta a ponta em produção, após um período com a máquina virtual desligada para economia de custos. As causas e correções desses casos são detalhadas na Seção~\ref{sec:tratamento-de-erros}.
 
 \section{Testes Funcionais}
 
-\subsection{Autenticação e Provision}
+\subsection{Autenticação, \textit{Provision} e Isolamento por \textit{Tenant}}
 
-O fluxo de \textit{login} com e-mail e senha, emissão de JWT e renovação silenciosa do \textit{access token} via \textit{refresh token} foi validado com sucesso. O \textit{provision} cria \textit{tenant}, administrador e configurações iniciais em uma única operação. Cenários de senha inválida, CNPJ inválido e e-mail malformado retornaram mensagens claras no frontend.
+O fluxo de \textit{login} com e-mail e senha, emissão de JWT e renovação silenciosa via \textit{refresh token} foi validado tanto localmente quanto em produção. O \textit{provision} de uma nova empresa (criação de \textit{tenant}, usuário administrador e configurações iniciais em uma única operação) foi exercitado repetidas vezes durante os testes, inclusive diretamente contra a API de produção via linha de comando, confirmando a emissão correta do token e das permissões associadas ao papel \textit{admin}. O isolamento por \texttt{tenant\_id} foi verificado criando registros em diferentes \textit{tenants} e confirmando que cada um enxerga apenas os seus próprios dados.
 
 \subsection{Dashboard e Módulos de Negócio}
 
-O painel exibiu corretamente indicadores de orçamentos, conversão, faturamento estimado e ticket médio, além dos gráficos e rankings, todos calculados no navegador a partir dos dados da API. Os módulos de clientes, produtos e orçamentos permitiram CRUD autenticado com isolamento por \textit{tenant}. A atualização de status de orçamento (comercial e de obra) e a tela de impressão foram verificadas manualmente.
+O painel exibiu corretamente os indicadores de orçamentos, conversão, faturamento estimado e ticket médio, calculados no navegador a partir dos dados retornados pela API (os valores atuais utilizam dados de demonstração, conforme indicado na própria interface). Os módulos de clientes, produtos e orçamentos foram exercitados com operações de criação, leitura, atualização e exclusão autenticadas.
 
-\subsection{Upload de Mídias (GCS)}
+\subsection{Landing Page e Captura de Leads}
 
-Com \texttt{GCS\_BUCKET} e credenciais configurados, o fluxo de URL assinada funcionou para logo, avatar e imagem de produto: o navegador envia o arquivo diretamente ao bucket privado e a aplicação persiste apenas o \texttt{object\_key}. Sem configuração de GCS, a API responde HTTP 503 no endpoint de assinatura, comportamento esperado e documentado.
+A landing page institucional foi validada quanto à navegação e ao envio do formulário de lista de espera. Com a API em execução, o \texttt{POST /api/v1/waitlist} persiste o \textit{lead} no PostgreSQL; reenvios com o mesmo WhatsApp retornam conflito (HTTP 409). Durante esta rodada de validação, foram removidos dois fluxos de autoatendimento que haviam sido implementados de forma parcial e que não refletiam o modelo de operação real do produto: uma tela de \textit{onboarding} público no painel (\texttt{/auth/onboarding}), que permitia a qualquer visitante criar uma nova empresa sem intermediação, e um \textit{modal} de \textit{checkout} na landing page, integrado a um fluxo de pagamento via Mercado Pago que nunca chegou a ser conectado à interface (os botões de assinatura da seção de planos direcionavam para a lista de espera, e não para o \textit{checkout}). Em ambos os casos, o \textit{endpoint} \texttt{/api/v1/auth/provision} --- responsável por criar \textit{tenant}, administrador e configurações iniciais em uma única operação --- permanece a forma correta de provisionar uma nova empresa, porém acionado diretamente pelo operador da plataforma, e não por autoatendimento público. Essa decisão e sua eventual automatização futura são discutidas na Seção~\ref{sec:limitacoes}.
 
-\section{Arquitetura e Entrega Contínua}
+\subsection{Módulo de Ideário (Sugestões e Roteiro de Funcionalidades)}
 
-A separação entre frontend (Vercel), API+PostgreSQL (VM com Docker Compose), GHCR (imagens Docker) e GCS (mídias) mostrou-se adequada ao MVP. O pipeline GitHub Actions reduz risco de deploy manual. A decisão por Compute Engine \texttt{e2-micro} (em vez de Cloud SQL/GKE) privilegia custo baixo sem impedir demonstração em produção.
+Durante a validação de ponta a ponta, identificou-se que o módulo de ideário --- funcionalidade que permite à equipe registrar itens de roteiro (\textit{backlog}, em desenvolvimento, lançado) e permite a qualquer usuário autenticado enviar sugestões de melhoria --- estava parcialmente implementado: o domínio, o repositório, o caso de uso e o \textit{handler} HTTP já existiam no \textit{backend}, e o serviço de consumo já existia no \textit{frontend}, mas as rotas nunca haviam sido registradas no roteador da API, e a página correspondente do painel (\texttt{/dashboard/ideario}) nunca havia sido criada, apesar do item já constar no menu lateral. O resultado observado era um \textit{link} que retornava HTTP 404.
 
-\section{Limitações Observadas}
+A funcionalidade foi concluída: as rotas foram registradas (\texttt{GET}/\texttt{POST /api/v1/roadmap}, \texttt{PUT}/\texttt{DELETE /api/v1/roadmap/:id}, \texttt{POST /api/v1/roadmap/suggestions}), com listagem aberta a qualquer usuário autenticado, mutações restritas ao papel \textit{admin} e envio de sugestões aberto a qualquer usuário do \textit{tenant}. A página do painel foi implementada com um quadro por status e formulários de criação, edição e sugestão. Após a conclusão, o fluxo completo foi validado com um item real já existente no banco de dados (semeado em uma etapa anterior do projeto e, até então, inacessível pela ausência da rota).
+
+\section{Responsividade e Acessibilidade}
+
+A responsividade do painel em navegadores desktop e em dispositivos móveis (iPhone e Android) havia sido validada manualmente durante a etapa de desenvolvimento descrita no Capítulo~\ref{cap3MatMet}. Nesta rodada de validação, o foco recaiu sobre o comportamento funcional de ponta a ponta e sobre a infraestrutura de produção; não foi conduzida uma nova bateria de testes de responsividade ou de acessibilidade (leitores de tela, navegação por teclado, contraste), o que é registrado como limitação na Seção~\ref{sec:limitacoes}.
+
+\section{Tratamento de Erros e Mensagens de Falha}
+\label{sec:tratamento-de-erros}
+
+Esta seção documenta quatro falhas reais identificadas durante a validação de ponta a ponta --- duas encontradas em testes locais sistemáticos e duas relatadas pelo autor durante o uso do sistema já em produção --- e as respectivas causas-raiz e correções. Optou-se por registrá-las de forma explícita por constituírem evidência concreta do processo de depuração e por ilustrarem uma diferença relevante entre validação em ambiente de desenvolvimento e validação em produção.
+
+\subsection{Painel inacessível por importação órfã}
+
+Ao subir o painel localmente para validação, a aplicação não renderizava nenhuma rota autenticada, falhando com erro de módulo não encontrado (\texttt{Module not found: Can't resolve '@/components/billing/SubscriptionGate'}). A investigação do histórico do repositório mostrou que um \textit{commit} anterior havia removido, de forma deliberada, toda a camada de controle de assinatura (\textit{billing}) --- decisão coerente com o escopo acadêmico do projeto, em que o acesso permanece aberto --- mas havia deixado um \textit{import} e um uso órfãos do componente removido no layout do painel. A correção consistiu em remover a referência remanescente, restabelecendo o funcionamento de toda a área autenticada.
+
+\subsection{Cadastro de cliente sem efeito}
+
+Em uso real do sistema em produção, observou-se que o botão de salvar no formulário de novo cliente disparava, no navegador, uma requisição \texttt{GET /api/v1/clients} em vez de um \texttt{POST}. A inspeção do código revelou que o botão de fato não realizava nenhuma chamada de criação: apenas fechava o \textit{modal} e recarregava a listagem --- a requisição \texttt{GET} observada era exatamente esse recarregamento, e nenhum cliente era, de fato, criado. Os campos do formulário também não possuíam estado controlado. A correção introduziu estado controlado nos campos e a chamada real ao serviço de criação/atualização de cliente, com tratamento de erro e indicação de carregamento.
+
+\subsection{Falha ao assinar URL de \textit{upload}}
+
+Também em produção, o \textit{upload} de imagem de produto retornava erro ao solicitar a URL assinada (\texttt{POST /api/v1/uploads/sign}). A investigação do lado do servidor revelou uma cadeia de causas de infraestrutura, e não de código de aplicação: (i) a conta de serviço anexada à máquina virtual possuía apenas o escopo OAuth de leitura no Cloud Storage (\texttt{devstorage.read\_only}), insuficiente para a operação de assinatura de URLs, que depende da API \textit{IAM Service Account Credentials}; (ii) essa API não estava habilitada no projeto; e (iii) a própria conta de serviço não possuía a permissão de assinar tokens como si mesma (\textit{papel} \texttt{iam.serviceAccountTokenCreator}), nem permissão de escrita no \textit{bucket} de destino. A correção exigiu conceder as duas permissões de IAM, habilitar a API necessária e ampliar o escopo OAuth da instância para \texttt{cloud-platform} --- esta última alteração só é aplicável com a máquina virtual desligada, exigindo uma parada e religamento breves. Após a correção, o fluxo completo (assinatura da URL, envio direto ao \textit{bucket} via \texttt{PUT} e leitura do objeto salvo) foi validado com sucesso em produção.
+
+\subsection{Discussão do processo de depuração}
+
+Em nenhum dos quatro casos o erro dependia de dados de entrada incomuns: os quatro se manifestavam de forma determinística, a cada tentativa, e passaram despercebidos até que o fluxo correspondente fosse exercitado de ponta a ponta --- em três casos, contra o ambiente de produção real. Esse resultado reforça a importância de validar não apenas unidades de código isoladamente, mas o comportamento integrado do sistema no ambiente onde ele efetivamente será utilizado, incluindo a configuração de infraestrutura subjacente (permissões de nuvem, variáveis de ambiente, escopos de autenticação de serviço), que não é exercitada por testes unitários nem por testes manuais restritos ao ambiente local.
+
+\section{Desempenho da Aplicação}
+
+O desempenho da API foi avaliado com a ferramenta de testes de carga k6, utilizando o roteiro \texttt{k6/erp-smoke.js} já existente no repositório do painel, contra os \textit{endpoints} de listagem de clientes, produtos e orçamentos, autenticados via JWT. O teste foi executado com dez usuários virtuais simultâneos, por vinte segundos, contra o ambiente local (API e banco no mesmo host, sem latência de rede pública).
 
 \begin{itemize}
-  \item Não há módulo completo de estoque de chapas/retalhos na versão atual --- o MVP concentra-se em clientes, produtos e orçamentos;
-  \item Diferenciação comercial por planos (limites de usuários/recursos) ficou como trabalho futuro; no MVP o acesso é aberto;
-  \item Testes E2E automatizados no frontend ainda não foram adotados como suíte principal;
-  \item A landing page vive em repositório separado do painel administrativo.
+  \item Requisições totais: 2\,782, com 927 iterações completas do roteiro;
+  \item Taxa de falha: 0,00\% (nenhuma requisição falhou);
+  \item Tempo de resposta médio: 12,55~ms; mediana: 11,61~ms;
+  \item Percentil 90: 22,14~ms; percentil 95: 26,23~ms; percentil 99: 48,99~ms;
+  \item Vazão: aproximadamente 138 requisições por segundo.
 \end{itemize}
 
-Essas limitações não invalidam os objetivos do trabalho; ao contrário, delimitam com clareza o escopo entregue e as oportunidades de evolução descritas na conclusão.
+Os limites definidos no próprio roteiro de teste (percentil 95 abaixo de 800~ms e percentil 99 abaixo de 1\,500~ms) foram amplamente atendidos, com margem superior a 20 vezes no percentil 95.
+
+De forma complementar, foram realizadas medições pontuais (requisição única, sem carga concorrente) contra a API em produção, através do IP público, para o \textit{endpoint} de \textit{health check}. O tempo total médio observado foi de aproximadamente 478~ms, dos quais cerca de 149~ms correspondem à etapa de conexão (TCP e \textit{handshake} TLS). Esse valor é sensivelmente maior do que o medido localmente, o que é esperado: a instância \texttt{e2-micro} está hospedada na região \texttt{us-central1} (Iowa, Estados Unidos), enquanto as medições foram feitas a partir do Brasil, de modo que grande parte da diferença corresponde à latência de rede intercontinental, e não a tempo de processamento da aplicação. Não foi conduzido teste de carga concorrente contra produção, para não gerar custo ou instabilidade desnecessários no ambiente público durante o período de avaliação.
+
+\section{Qualidade do Código e Componentização}
+
+Como indicador objetivo de qualidade, foram executadas ferramentas de análise estática nos dois repositórios principais: \texttt{golangci-lint} no \textit{backend} (agregando os analisadores \texttt{errcheck}, \texttt{ineffassign}, \texttt{staticcheck} e \texttt{unused}, entre outros) e \texttt{eslint} no \textit{frontend} (configuração \texttt{eslint-config-next}, com as regras de \textit{hooks} do React e \texttt{@typescript-eslint}).
+
+No estado em que o projeto se encontrava no início desta rodada de validação, o \textit{backend} apresentava 19 ocorrências (8 retornos de erro não verificados, 3 atribuições inefetivas em testes, 5 sugestões de simplificação e 3 funções não utilizadas) e o \textit{frontend} apresentava 18 ocorrências (12 erros, majoritariamente uso do tipo \texttt{any}, e 6 avisos, incluindo uma chamada de atualização de estado de forma síncrona dentro de um efeito React). Todas as ocorrências foram corrigidas: os retornos de erro passaram a ser tratados ou descartados explicitamente, os tipos \texttt{any} foram substituídos por tipos concretos ou por \texttt{Record\textless string, unknown\textgreater}, o código morto foi removido, e os dois efeitos que atualizavam estado de forma síncrona foram reestruturados --- um com \texttt{useSyncExternalStore}, para a detecção de montagem do componente sem mismatch de \textit{hydration}, e outro como uma função assíncrona nomeada invocada a partir do efeito. Ao final, ambos os repositórios passaram a apresentar zero ocorrências nas duas ferramentas, com a suíte de testes automatizados do \textit{backend} (\texttt{go test ./...}) permanecendo integralmente aprovada após as correções.
+
+\section{Integração com Serviços Externos e \textit{Pipeline} de CI/CD}
+
+O \textit{pipeline} de integração e entrega contínuas (GitHub Actions) foi revisado e ampliado durante esta etapa. Na configuração original, o \textit{workflow} de \textit{deploy} construía a imagem Docker, publicava-a no GHCR com duas \textit{tags} (\texttt{latest} e o \textit{hash} do \textit{commit}) e a implantava na máquina virtual via SSH, sem verificação posterior de sucesso. O \textit{workflow} foi ampliado para: (i) sincronizar automaticamente os arquivos de configuração do Docker Compose e do Nginx a partir do repositório, eliminando a necessidade de cópia manual; (ii) executar um \textit{health check} contra o \textit{endpoint} \texttt{/health} após a subida dos novos contêineres; e (iii) reverter automaticamente para a \textit{tag} anteriormente implantada, registrada em um arquivo de controle na própria máquina virtual, caso o \textit{health check} falhe, encerrando a execução com status de falha para sinalização da equipe.
+
+O \textit{pipeline} atualizado foi validado com uma execução real, disparada por um \textit{push} na ramificação principal: a construção, publicação da imagem, sincronização de configuração, \textit{deploy} e verificação de saúde foram concluídos com sucesso em menos de dois minutos, e a \textit{tag} da imagem em execução na máquina virtual foi confirmada como idêntica ao \textit{hash} do \textit{commit} enviado, confirmando o comportamento esperado de versionamento automático a cada \textit{push}.
+
+Adicionalmente, foi identificado e corrigido um problema de infraestrutura que não decorria do código da aplicação: o IP externo da máquina virtual era efêmero, alterando-se a cada desligamento e religamento --- rotina normal do projeto, adotada para conter custos fora dos períodos de avaliação --- o que já havia causado desatualização do registro de DNS do domínio da API. O IP foi reservado como estático, eliminando essa causa de indisponibilidade em ciclos futuros de desligamento e religamento da máquina virtual.

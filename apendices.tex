@@ -1,9 +1,49 @@
 \apendices
 
-\chapter{A experiência de cuidar}
-<OPCIONAL>\\
-(INFORMAÇÃO ELABORADA PELO PRÓPRIO AUTOR DA MONOGRAFIA)
+\chapter{Checklist de Testes Executados}
+\label{apendiceChecklist}
 
-\chapter{A experiência de estudar}
-OPCIONAL\\
-(INFORMAÇÃO ELABORADA PELO PRÓPRIO AUTOR DA MONOGRAFIA)
+Este apêndice sintetiza, em formato de checklist, os cenários exercitados durante a etapa de validação de ponta a ponta descrita no Capítulo~\ref{cap4Resultados}, complementando a descrição textual daquele capítulo.
+
+\begin{itemize}
+  \item[\textbf{[OK]}] Login com e-mail e senha, emissão e renovação de JWT (local e produção);
+  \item[\textbf{[OK]}] \textit{Provision} de nova empresa via API (criação de \textit{tenant}, administrador e configurações iniciais);
+  \item[\textbf{[OK]}] Isolamento de dados entre \textit{tenants} distintos;
+  \item[\textbf{[OK]}] CRUD de clientes autenticado (criação, listagem, edição e exclusão);
+  \item[\textbf{[OK]}] CRUD de produtos autenticado, incluindo imagem via GCS;
+  \item[\textbf{[OK]}] CRUD de orçamentos, com atualização de status comercial e de obra;
+  \item[\textbf{[OK]}] Painel inicial (\textit{dashboard}) com indicadores e gráficos;
+  \item[\textbf{[OK]}] Formulário de lista de espera da landing page, incluindo tratamento de conflito (HTTP 409) para reenvio;
+  \item[\textbf{[OK]}] Módulo de ideário: listagem, criação, edição e exclusão de itens (administrador) e envio de sugestão (usuário autenticado);
+  \item[\textbf{[OK]}] Fluxo de \textit{upload} assinado (\texttt{sign} $\rightarrow$ \texttt{PUT} direto ao \textit{bucket} $\rightarrow$ leitura via URL assinada);
+  \item[\textbf{[OK]}] \textit{Pipeline} de CI/CD: \textit{build}, publicação no GHCR, sincronização de configuração, \textit{deploy} e \textit{health check}, disparados por \textit{push} real;
+  \item[\textbf{[OK]}] Suíte automatizada do \textit{backend} (\texttt{go test ./...}) aprovada integralmente após as correções de qualidade de código;
+  \item[\textbf{[OK]}] Teste de carga (k6) contra os \textit{endpoints} de listagem, sem falhas em quase três mil requisições;
+  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Nova bateria de testes de responsividade e acessibilidade (reaproveitada validação anterior, Seção~\ref{sec:testes-e-validacao-cap3});
+  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Teste de carga concorrente diretamente contra o ambiente de produção.
+\end{itemize}
+
+\chapter{Trecho do \textit{Workflow} de Implantação Contínua}
+\label{apendiceWorkflow}
+
+O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/workflows/deploy.yml}), executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha, discutidos na Seção~4.8.
+
+\begin{verbatim}
+export GHCR_OWNER='<owner>'
+export IMAGE_TAG='<sha-do-commit>'
+PREVIOUS_TAG="$(cat .deployed_tag 2>/dev/null || echo latest)"
+
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# health check com nova tentativa, seguido de rollback automático
+# para PREVIOUS_TAG caso o endpoint /health nao responda com sucesso
+if ! curl -fsSk -H "Host: api.onmarmoraria.com.br" \
+     https://localhost/health; then
+  export IMAGE_TAG="$PREVIOUS_TAG"
+  docker compose -f docker-compose.prod.yml up -d
+  exit 1
+fi
+
+echo "$IMAGE_TAG" > .deployed_tag
+\end{verbatim}
