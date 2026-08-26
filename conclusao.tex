@@ -7,7 +7,7 @@
 
 Este trabalho apresentou o desenvolvimento do Onmarmoraria, um ERP web multi-\textit{tenant} voltado à digitalização de processos em marmorarias. Foram integrados conhecimentos de engenharia de software, APIs REST, autenticação JWT, computação em nuvem e entrega contínua, resultando em uma solução funcional alinhada às necessidades de cadastro de clientes, catálogo de produtos e gestão de orçamentos.
 
-A arquitetura adotada --- monólito modular em Go, frontend Next.js, PostgreSQL, Docker, GHCR, GitHub Actions, Compute Engine e GCS --- privilegiou reprodutibilidade, segurança (bucket privado com URLs assinadas) e baixo custo operacional, viabilizando a subida em produção sem depender de serviços caros nesta fase. Os testes automatizados do backend e as validações manuais do painel indicam estabilidade dos fluxos críticos para demonstração acadêmica e uso inicial por pequenas marmorarias.
+A arquitetura adotada --- monólito modular em Go, frontend Next.js, PostgreSQL, Docker, GHCR e GitHub Actions, com caminho projetado para Compute Engine ou VPS, orquestração via Kubernetes e GCS --- privilegiou reprodutibilidade, segurança (bucket privado com URLs assinadas) e baixo custo operacional, viabilizando uma eventual subida em produção sem depender de serviços caros. A validação deste trabalho, contudo, foi conduzida em ambiente local: os testes automatizados do backend, a suíte de carga local (k6) e as validações manuais do painel -- em desktop e em dispositivos móveis reais -- indicam estabilidade dos fluxos críticos para demonstração acadêmica e uso inicial por pequenas marmorarias.
 
 Para além do aspecto técnico, o projeto contribui ao oferecer uma base concreta de digitalização para um setor que ainda opera, em muitos casos, com planilhas e controles fragmentados. O Onmarmoraria não pretende esgotar todas as particularidades do chão de fábrica, mas entregar um núcleo operacional útil e expansível.
 
@@ -17,7 +17,8 @@ A conclusão deste projeto não representa um ponto final, e sim a consolidaçã
   \item Validação com usuários reais (donos e colaboradores de marmorarias) para medir usabilidade e impacto operacional;
   \item Módulo de estoque de chapas e retalhos, com rastreabilidade de matéria-prima;
   \item Diferenciação por planos (limites de usuários e recursos conforme o porte da marmoraria) e eventual integração com gateway de pagamento;
-  \item Ampliação de testes automatizados (incluindo E2E no frontend) e observabilidade em produção;
+  \item Execução da implantação em um ambiente de nuvem real (VM/VPS ou Kubernetes), validando de ponta a ponta a arquitetura já projetada e versionada no repositório;
+  \item Ampliação de testes automatizados (incluindo E2E no frontend) e observabilidade quando a operação em nuvem for retomada;
   \item Aprofundamento de relatórios gerenciais e exportações;
   \item Adequações à LGPD (políticas de retenção, consentimento e exclusão de dados);
   \item Ampliação do funil da landing page (nutrição de leads e acompanhamento comercial) alinhado ao produto.

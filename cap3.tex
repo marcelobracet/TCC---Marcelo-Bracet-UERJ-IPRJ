@@ -3,7 +3,7 @@ Neste capítulo, são apresentadas as tecnologias utilizadas, as ferramentas ado
 
 O desenvolvimento do sistema foi fundamentado em práticas contemporâneas de engenharia de software, com ênfase em modularidade, escalabilidade, desempenho, reuso de componentes e segurança da informação. Para isso, foram selecionadas tecnologias amplamente consolidadas no mercado e compatíveis com uma arquitetura flexível, preparada para evoluções futuras. Além disso, buscou-se garantir uma experiência fluida e intuitiva para os usuários, considerando princípios de usabilidade, padronização de fluxos e redução de fricções no uso diário da aplicação.
 
-A escolha por computação em nuvem e conteinerização teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A API e o PostgreSQL executam em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine); o frontend é publicado na Vercel; as mídias ficam no Google Cloud Storage (GCS); e as imagens Docker da API são versionadas no GHCR. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável para um MVP acadêmico com perspectiva de uso em produção.
+A escolha por computação em nuvem e conteinerização teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A arquitetura foi desenhada para que a API e o PostgreSQL executem em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine) ou em um VPS equivalente --- com manifestos de Kubernetes já preparados no repositório para cenários de maior escala (Apêndice~\ref{apendiceWorkflow}) ---, o frontend seja publicado na Vercel, as mídias fiquem no Google Cloud Storage (GCS) e as imagens Docker da API sejam versionadas no GHCR. Por se tratar de um MVP acadêmico, e com o objetivo de manter o material documentado neste trabalho sempre acessível e sob controle de custo, a validação prática do sistema foi conduzida em ambiente Docker local, reproduzindo os mesmos contêineres e a mesma configuração previstos para essa camada de infraestrutura em nuvem. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável.
 
 Este capítulo também apresenta os princípios que guiaram a modelagem dos processos internos, a definição dos fluxos de informação, as estratégias de persistência de dados e os mecanismos de autenticação utilizados. O intuito é fornecer uma visão detalhada do percurso técnico do projeto, desde as primeiras decisões de arquitetura até as etapas finais de entrega e testes do sistema.
 
@@ -15,7 +15,7 @@ O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e am
 \item \textbf{Frontend:} Next.js (App Router), React, TypeScript e Tailwind CSS, com comunicação HTTP via Axios e tipagem estática para reduzir erros em tempo de desenvolvimento.
 \item \textbf{Backend:} linguagem Go, \textit{framework} Gin para HTTP e GORM como ORM para persistência no PostgreSQL. Autenticação com JWT (\textit{access token} e \textit{refresh token}) e senhas com bcrypt.
 \item \textbf{Banco de Dados:} PostgreSQL 15, escolhido por robustez, propriedades ACID e adequação a dados relacionais de clientes, produtos e orçamentos.
-\item \textbf{Infraestrutura e Deploy:} Google Cloud Compute Engine (VM) para API e banco em Docker Compose; Vercel para o frontend; GHCR para imagens Docker da API; GCS para mídias (logo, avatar e produtos) via URLs assinadas; CI/CD com GitHub Actions.
+\item \textbf{Infraestrutura e Deploy:} Docker e Docker Compose para execução local da API e do banco, reproduzindo a topologia prevista para produção; arquitetura preparada para Google Cloud Compute Engine ou VPS (VM) e para orquestração via Kubernetes (manifestos versionados no repositório); Vercel para o frontend; GHCR para imagens Docker da API; GCS para mídias (logo, avatar e produtos) via URLs assinadas; CI/CD com GitHub Actions (build e publicação de imagem).
 \item \textbf{Ferramentas complementares:} Docker, GitHub, Postman (validação de rotas) e a landing page institucional (Next.js) para marketing e captura de leads.
 \end{itemize}
 
@@ -50,7 +50,7 @@ Foram implementados \textit{endpoints} sob o prefixo \texttt{/api/v1} para:
   \item \textit{Upload} de arquivos (logo, avatar e imagens de produto) via URLs assinadas no GCS;
   \item Consulta de auditoria e exportação básica de relatórios de produtos;
   \item Cadastro público na lista de espera (landing page), persistido no PostgreSQL;
-  \item \textit{Healthchecks} (\texttt{/health}, \texttt{/liveness}, \texttt{/readiness}) para monitoramento em produção.
+  \item \textit{Healthchecks} (\texttt{/health}, \texttt{/liveness}, \texttt{/readiness}) para monitoramento do ambiente de execução, local ou em nuvem.
 \end{itemize}
 
 O armazenamento de mídias foi delegado ao Google Cloud Storage (GCS), por meio da biblioteca oficial \texttt{cloud.google.com/go/storage}. Em vez de receber o arquivo no servidor da API, o \textit{backend} emite URLs assinadas (\textit{signed URLs}) de escrita e leitura. O \textit{frontend} envia o arquivo diretamente ao \textit{bucket} (privado) e, para exibição, solicita uma URL assinada de leitura. Essa estratégia reduz a carga sobre a API, evita expor o \textit{bucket} publicamente e permite controlar o acesso por tempo limitado.
@@ -123,7 +123,7 @@ No \textit{backend}, a validação automatizada foi implementada com o pacote pa
 
 Complementarmente, foram realizadas validações manuais dos principais \textit{endpoints} da API (via Postman e pelo próprio painel), conferindo status HTTP, estrutura do JSON de resposta, mensagens de erro e regras de autorização.
 
-Essa combinação de testes manuais e automatizados permitiu verificar a corretude das regras de negócio, a integridade das requisições autenticadas e a estabilidade dos fluxos críticos do sistema antes da disponibilização em ambiente de produção.
+Essa combinação de testes manuais e automatizados permitiu verificar a corretude das regras de negócio, a integridade das requisições autenticadas e a estabilidade dos fluxos críticos do sistema na versão avaliada neste trabalho.
 
 \section{Funcionalidades da Aplicação}
 
@@ -189,14 +189,78 @@ A tela de \textit{dashboard} apresenta as principais métricas a serem analisada
 \subsection{Gestão de Clientes}
 
 O módulo de clientes permite listar, criar, editar e excluir registros vinculados ao \textit{tenant}. O formulário contempla nome, e-mail, telefone, documento (CPF ou CNPJ), endereço, cidade, UF e CEP, com validações no frontend e regras no backend. A partir da listagem, o usuário pode abrir o formulário de novo cliente e, após o salvamento, o registro passa a constar na grade.
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/clientes.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: listagem do módulo Clientes, com cliente de teste cadastrado]}}
+  \caption{Módulo de gestão de clientes: listagem de registros do \textit{tenant} (dado fictício de teste).}
+  \label{fig:clientes}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
 
 \subsection{Produtos e Orçamentos}
 
 O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com imagem armazenada no GCS. O módulo de orçamentos permite criar e editar propostas vinculadas a clientes e itens, com atualização de status comercial e de obra, além de visualização/impressão. Esses fluxos constituem o núcleo operacional do MVP entregue neste trabalho.
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/produtos.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: listagem do módulo Produtos]}}
+  \caption{Módulo de catálogo de produtos.}
+  \label{fig:produtos}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/orcamentos.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: listagem do módulo Orçamentos (dado fictício de teste)]}}
+  \caption{Módulo de gestão de orçamentos, com filtro por status.}
+  \label{fig:orcamentos}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
 
 \subsection{Configurações e Perfil}
 
 Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado no GCS) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
+
+\subsection{Responsividade em Dispositivos Móveis}
+
+Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o painel foi acessado em navegador a partir de aparelhos físicos iPhone e Android, na mesma rede local do ambiente de desenvolvimento, permitindo observar o comportamento real de \textit{layout}, toque e navegação em telas de tamanho reduzido. As Figuras~\ref{fig:mobile-dashboard} e \ref{fig:mobile-clientes} ilustram o painel renderizado em viewport de \textit{smartphone}.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/mobile-dashboard.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: dashboard aberto no iPhone/Android]}}
+  \caption{Painel (dashboard) renderizado em viewport de \textit{smartphone}.}
+  \label{fig:mobile-dashboard}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/mobile-clientes.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: listagem de clientes aberta no iPhone/Android]}}
+  \caption{Módulo de clientes renderizado em viewport de \textit{smartphone}.}
+  \label{fig:mobile-clientes}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
 
 \section{Integrações externas}
 
@@ -224,4 +288,4 @@ A seção de planos na landing descreve uma diferenciação futura por porte da 
 
 \subsection{GHCR e GitHub Actions (entrega contínua)}
 
-O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem, publica no GHCR e realiza o \textit{deploy} na VM. Essa integração não se confunde com o armazenamento de mídias do usuário, que permanece no GCS.
+O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem e a publica no GHCR; a etapa de \textit{deploy} em uma VM ou VPS está implementada e versionada no pipeline (Apêndice~\ref{apendiceWorkflow}), mas permanece preparada para quando a operação em nuvem for retomada, não sendo executada de forma contínua nesta fase de validação acadêmica (Capítulo~\ref{cap5Discussao}). Essa integração não se confunde com o armazenamento de mídias do usuário, projetado para o GCS.

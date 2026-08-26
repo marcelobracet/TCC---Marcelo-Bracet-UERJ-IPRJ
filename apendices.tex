@@ -6,7 +6,7 @@
 Este apêndice sintetiza, em formato de checklist, os cenários exercitados durante a etapa de validação de ponta a ponta descrita no Capítulo~\ref{cap4Resultados}, complementando a descrição textual daquele capítulo.
 
 \begin{itemize}
-  \item[\textbf{[OK]}] Login com e-mail e senha, emissão e renovação de JWT (local e produção);
+  \item[\textbf{[OK]}] Login com e-mail e senha, emissão e renovação de JWT (ambiente local);
   \item[\textbf{[OK]}] \textit{Provision} de nova empresa via API (criação de \textit{tenant}, administrador e configurações iniciais);
   \item[\textbf{[OK]}] Isolamento de dados entre \textit{tenants} distintos;
   \item[\textbf{[OK]}] CRUD de clientes autenticado (criação, listagem, edição e exclusão);
@@ -16,17 +16,18 @@ Este apêndice sintetiza, em formato de checklist, os cenários exercitados dura
   \item[\textbf{[OK]}] Formulário de lista de espera da landing page, incluindo tratamento de conflito (HTTP 409) para reenvio;
   \item[\textbf{[OK]}] Módulo de ideário: listagem, criação, edição e exclusão de itens (administrador) e envio de sugestão (usuário autenticado);
   \item[\textbf{[OK]}] Fluxo de \textit{upload} assinado (\texttt{sign} $\rightarrow$ \texttt{PUT} direto ao \textit{bucket} $\rightarrow$ leitura via URL assinada);
-  \item[\textbf{[OK]}] \textit{Pipeline} de CI/CD: \textit{build}, publicação no GHCR, sincronização de configuração, \textit{deploy} e \textit{health check}, disparados por \textit{push} real;
+  \item[\textbf{[OK]}] \textit{Pipeline} de CI/CD: \textit{build} e publicação no GHCR disparados por \textit{push} real; sincronização de configuração, \textit{deploy} e \textit{health check} implementados e validados em ambiente local (Apêndice~\ref{apendiceWorkflow});
+  \item[\textbf{[BUG IDENTIFICADO]}] Cadastro de cliente via formulário do painel -- falha por ausência dos campos \texttt{document\_type} e \texttt{tenant\_id} no corpo da requisição (Capítulo~4, Seção~4.6);
   \item[\textbf{[OK]}] Suíte automatizada do \textit{backend} (\texttt{go test ./...}) aprovada integralmente após as correções de qualidade de código;
   \item[\textbf{[OK]}] Teste de carga (k6) contra os \textit{endpoints} de listagem, sem falhas em quase três mil requisições;
-  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Nova bateria de testes de responsividade e acessibilidade (reaproveitada validação anterior, Seção~\ref{sec:testes-e-validacao-cap3});
-  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Teste de carga concorrente diretamente contra o ambiente de produção.
+  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Bateria formal de testes de acessibilidade (leitores de tela, navegação por teclado, contraste);
+  \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Implantação e teste de carga contra uma instância de nuvem real -- a arquitetura está projetada e versionada (Apêndice~\ref{apendiceWorkflow}), mas não foi exercitada contra um alvo público nesta fase acadêmica.
 \end{itemize}
 
 \chapter{Trecho do \textit{Workflow} de Implantação Contínua}
 \label{apendiceWorkflow}
 
-O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/workflows/deploy.yml}), executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha, discutidos na Seção~4.8.
+O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/workflows/deploy.yml}), prevista para ser executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha, discutidos na Seção~4.9; conforme registrado no Capítulo~5, essa etapa está implementada e foi validada em ambiente local, mas não foi exercitada de forma contínua contra uma instância de nuvem pública nesta fase acadêmica.
 
 \begin{verbatim}
 export GHCR_OWNER='<owner>'
@@ -38,7 +39,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 # health check com nova tentativa, seguido de rollback automático
 # para PREVIOUS_TAG caso o endpoint /health nao responda com sucesso
-if ! curl -fsSk -H "Host: api.onmarmoraria.com.br" \
+if ! curl -fsSk -H "Host: api.exemplo.com.br" \
      https://localhost/health; then
   export IMAGE_TAG="$PREVIOUS_TAG"
   docker compose -f docker-compose.prod.yml up -d
