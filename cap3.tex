@@ -24,6 +24,11 @@ O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e am
 
 A partir do levantamento apresentado na Seção~\ref{sec:levantamento-requisitos} (Capítulo~\ref{cap2FundamentosTecnicos}) e das entrevistas informais com o público-alvo, foram consolidados os requisitos funcionais (RF) e não funcionais (RNF) que orientaram a implementação do sistema. Os requisitos funcionais descrevem o que o sistema deve fazer; os não funcionais descrevem restrições de qualidade sob as quais o sistema deve operar.
 
+\subsection{Requisitos Funcionais}
+\label{sec:requisitos-funcionais}
+
+Os requisitos funcionais definem as capacidades e comportamentos específicos que o sistema deve implementar para atender às necessidades da marmoraria.
+
 \begin{table}[H]
   \centering
   \caption{Requisitos funcionais do sistema.}
@@ -54,6 +59,11 @@ A partir do levantamento apresentado na Seção~\ref{sec:levantamento-requisitos
   \end{minipage}
 \end{table}
 
+\subsection{Requisitos Não Funcionais}
+\label{sec:requisitos-nao-funcionais}
+
+Os requisitos não funcionais especificam critérios de qualidade, desempenho e segurança que o sistema deve satisfazer.
+
 \begin{table}[H]
   \centering
   \caption{Requisitos não funcionais do sistema.}
@@ -78,6 +88,426 @@ A partir do levantamento apresentado na Seção~\ref{sec:levantamento-requisitos
     {\small Fonte: O Autor, 2026.}
   \end{minipage}
 \end{table}
+
+
+\subsection{Backlog de Implementação}
+\label{sec:backlog-implementacao}
+
+A Tabela~\ref{tab:backlog} apresenta o backlog resumido do projeto, consolidando os requisitos funcionais e não funcionais e classificando cada um segundo sua prioridade (Alta, Média ou Baixa) e status de atendimento. A priorização seguiu o princípio de que funcionalidades críticas para a operação comercial da marmoraria -- autenticação, isolamento multi-tenant e o ciclo completo de orçamentos -- receberam prioridade alta, enquanto funcionalidades complementares receberam prioridades inferiores. O status ``Implementado'' indica requisitos funcionais completamente desenvolvidos e testados; ``Atendido'' indica requisitos não funcionais que alcançaram os critérios de qualidade estabelecidos.
+
+\begin{table}[H]
+  \centering
+  \caption{Backlog resumido de requisitos do sistema.}
+  \label{tab:backlog}
+  \begin{tabular}{p{1.2cm}p{7.9cm}p{1.6cm}p{2.3cm}}
+    \hline
+    \textbf{ID} & \textbf{Requisito} & \textbf{Prioridade} & \textbf{Status} \\
+    \hline
+    RF01 & Autenticação com JWT (\textit{access} + \textit{refresh token}) & Alta & Implementado \\
+    RF02 & Isolamento \textit{multi-tenant} dos dados & Alta & Implementado \\
+    RF03 & Provisionamento de nova empresa & Alta & Implementado \\
+    RF04 & CRUD de clientes com validação de CPF/CNPJ & Alta & Implementado \\
+    RF05 & CRUD de produtos com estoque e categoria & Alta & Implementado \\
+    RF06 & Criação e gestão de orçamentos & Alta & Implementado \\
+    RF07 & Cálculo automático de subtotal, desconto e total & Alta & Implementado \\
+    RF08 & Acompanhamento de status comercial e de obra & Alta & Implementado \\
+    RF09 & Envio de imagens via URL assinada (local/nuvem) & Alta & Implementado \\
+    RF10 & Gestão de usuários internos com papéis e permissões & Média & Implementado \\
+    RF11 & Log de auditoria das operações & Média & Implementado \\
+    RF12 & \textit{Dashboard} com indicadores consolidados & Média & Implementado \\
+    RF13 & Captura de leads pela \textit{landing page} & Baixa & Implementado \\
+    RF14 & \textit{Roadmap}/ideário de melhorias & Baixa & Implementado \\
+    RNF01 & Segurança (bcrypt, JWT, HMAC-SHA256) & Alta & Atendido \\
+    RNF02 & Isolamento \textit{multi-tenant} reforçado & Alta & Atendido \\
+    RNF03 & Portabilidade via Docker/Docker Compose & Alta & Atendido \\
+    RNF04 & Armazenamento de mídia sem custo obrigatório & Alta & Atendido \\
+    RNF05 & Responsividade (\textit{desktop} e móvel) & Média & Atendido \\
+    RNF06 & Desempenho validado por testes de carga (k6) & Média & Atendido \\
+    RNF07 & Manutenibilidade (\textit{Clean Architecture}) & Média & Atendido \\
+    RNF08 & Integração contínua (GitHub Actions/GHCR) & Média & Atendido \\
+    RNF09 & Usabilidade dos fluxos de cadastro & Média & Atendido \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+\section{Modelo de Dados}
+\label{sec:modelo-dados}
+
+Esta seção apresenta o modelo de dados persistido no PostgreSQL. O esquema é composto por oito tabelas principais: \texttt{tenants} armazena a empresa contratante, \texttt{users} os usuários internos, \texttt{clients} e \texttt{products} os cadastros de apoio à operação comercial, \texttt{quotes} e \texttt{quote\_items} os orçamentos e seus itens, \texttt{audits} o histórico de auditoria, e \texttt{waitlist\_leads} os contatos captados pela \textit{landing page}. A Figura~\ref{fig:diagrama-er} apresenta a visão geral do esquema e de seus relacionamentos; as subseções seguintes detalham a estrutura de cada tabela.
+
+\subsection{Diagrama de Entidade-Relacionamento}
+\label{sec:diagrama-er}
+
+O diagrama entidade-relacionamento (Figura~\ref{fig:diagrama-er}) descreve o esquema relacional persistido no PostgreSQL, com as respectivas chaves primárias (PK), chaves estrangeiras (FK) e cardinalidades. Todas as tabelas de negócio carregam \texttt{tenant\_id}, reforçando o isolamento \textit{multi-tenant} também no nível de dados (RNF02).
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Diagrama de entidade-relacionamento do banco de dados.}
+  \label{fig:diagrama-er}
+  \resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  tbl/.style={
+    rectangle split, rectangle split parts=2, draw, align=left,
+    font=\footnotesize, rectangle split part align={left,left},
+    text width=3.5cm, inner sep=3pt
+  },
+  every edge/.style={draw, -{Latex[length=1.8mm]}, thick}
+]
+
+\node[tbl] (tenants) at (0,8) {
+  \textbf{tenants}
+  \nodepart{second} \underline{PK id} \\ company\_name \\ cnpj \\ plan, status \\ billing\_active
+};
+
+\node[tbl] (users) at (7,8) {
+  \textbf{users}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, email \\ password\_hash \\ role, status \\ permissions (json)
+};
+
+\node[tbl] (clients) at (0,3.2) {
+  \textbf{clients}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, document \\ document\_type \\ address, city, state \\ is\_active
+};
+
+\node[tbl] (products) at (7,3.2) {
+  \textbf{products}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, price \\ price\_type, stock \\ sku, category \\ is\_active
+};
+
+\node[tbl] (quotes) at (0,-2.2) {
+  \textbf{quotes}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK client\_id \\ FK user\_id \\ subtotal, discount \\ total\_value \\ status, work\_status
+};
+
+\node[tbl] (quoteitems) at (7,-2.2) {
+  \textbf{quote\_items}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK quote\_id \\ FK product\_id \\ width\_cm, height\_cm \\ unit\_price, quantity \\ total
+};
+
+\node[tbl] (audits) at (0,-7.6) {
+  \textbf{audits}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK user\_id (nullable) \\ module, action \\ object\_id, object\_name \\ status\_code
+};
+
+\node[tbl] (leads) at (7,-7.6) {
+  \textbf{waitlist\_leads}
+  \nodepart{second} \underline{PK id} \\ name, whatsapp (unique) \\ state \\ company\_size \\ quotes\_avg \\ source
+};
+
+% Relacionamentos (crow's foot simplificado com rótulos 1/N)
+\draw (tenants.south) to["1"] ["N"'] (users.north);
+\draw (tenants) to[bend right=10, "1"] ["N"'] (clients);
+\draw (tenants) to[bend left=10, "1"] ["N"'] (products);
+% Spine à esquerda (x=-3.4), fora de todas as caixas, para tenants->quotes e tenants->audits
+\draw (tenants.west) -| ++(-3.4,0) node[pos=0.15, above, font=\scriptsize] {1}
+      |- ($(quotes.west)+(-1.55,0)$) -- (quotes.west);
+\node[font=\scriptsize] at (-3.65,-2.0) {N};
+\draw (tenants.west) -| ++(-4.3,0)
+      |- ($(audits.west)+(-2.45,0)$) -- (audits.west);
+\node[font=\scriptsize] at (-4.55,-7.4) {N};
+\draw (clients.south) to["1"] ["N"'] (quotes.north);
+\draw (users) to[bend left=15, "1"] ["N"'] (quotes);
+% Spine à direita (x=9.6) para users->audits, contornando quote_items
+\draw (users.east) -| ++(1.0,-0.3) node[pos=0.2, above, font=\scriptsize] {0..1}
+      |- ($(audits.east)+(1.9,0)$) -- (audits.east);
+\node[font=\scriptsize] at (9.85,-7.4) {N};
+\draw (quotes.south) to["1"] ["N"'] (quoteitems.north);
+\draw (products) to[bend right=15, "1"] ["N"'] (quoteitems);
+
+\node[font=\scriptsize, align=left, anchor=north west] at (10.7,8) {
+  \textbf{Legenda}\\
+  PK = chave primária\\
+  FK = chave estrangeira\\
+  1 / N = cardinalidade\\
+  (isolamento multi-tenant:\\ toda tabela de negócio\\ carrega tenant\_id)
+};
+
+\end{tikzpicture}
+}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\subsection{Tabela tenants}
+\label{sec:tabela-tenants}
+
+A Tabela~\ref{tab:tabela-tenants} apresenta a estrutura da tabela \texttt{tenants}, que armazena os dados de cada empresa contratante do sistema.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{tenants}.}
+  \label{tab:tabela-tenants}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    company\_name & TEXT & NÃO & Razão social da empresa \\
+    trade\_name & TEXT & SIM & Nome fantasia \\
+    cnpj & TEXT & SIM & CNPJ (índice único) \\
+    email, phone & TEXT & SIM & Contato principal da empresa \\
+    plan & TEXT & NÃO & Plano contratado (padrão: \textit{essencial}) \\
+    status & TEXT & NÃO & \texttt{pending}, \texttt{active}, \texttt{suspended}, \texttt{canceled} \\
+    billing\_active & BOOLEAN & NÃO & Indica assinatura de cobrança ativa \\
+    is\_active & BOOLEAN & NÃO & Flag operacional da empresa \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    deleted\_at & TIMESTAMP & SIM & Exclusão lógica (\textit{soft delete}) \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+A tabela é a raiz do isolamento \textit{multi-tenant}: toda tabela de negócio referencia \texttt{tenants.id} por meio da coluna \texttt{tenant\_id}. O campo \texttt{status} controla o ciclo de vida comercial da empresa (criada, paga e liberada, inadimplente/bloqueada ou cancelada), enquanto \texttt{is\_active} é uma flag operacional independente usada por rotinas administrativas.
+
+\subsection{Tabela users}
+\label{sec:tabela-users}
+
+A Tabela~\ref{tab:tabela-users} apresenta a estrutura da tabela \texttt{users}, que armazena os usuários internos de cada \textit{tenant}.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{users}.}
+  \label{tab:tabela-users}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
+    name, email & TEXT & NÃO & Nome e e-mail (único por \textit{tenant}) \\
+    password\_hash & TEXT & NÃO & Hash bcrypt da senha \\
+    role & TEXT & NÃO & \texttt{admin}, \texttt{manager}, \texttt{employee} \\
+    status & TEXT & NÃO & \texttt{active}, \texttt{inactive}, \texttt{pending\_verification} \\
+    permissions & JSON & NÃO & Lista de permissões granulares \\
+    avatar\_url & TEXT & SIM & Referência da imagem de avatar \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+O índice único composto em (\texttt{tenant\_id}, \texttt{email}) garante que o mesmo e-mail possa ser reutilizado em \textit{tenants} distintos, mas não duas vezes dentro da mesma empresa. O papel \texttt{admin} concede todas as permissões implicitamente (\texttt{HasPermission()} retorna verdadeiro sem consultar a lista), enquanto os demais papéis dependem do array \texttt{permissions}.
+
+\subsection{Tabela clients}
+\label{sec:tabela-clients}
+
+A Tabela~\ref{tab:tabela-clients} apresenta a estrutura da tabela \texttt{clients}, que armazena os clientes de cada \textit{tenant}.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{clients}.}
+  \label{tab:tabela-clients}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
+    name & TEXT & NÃO & Nome ou razão social do cliente \\
+    email, phone & TEXT & SIM & Contato do cliente \\
+    document & TEXT & NÃO & CPF ou CNPJ (único por \textit{tenant}) \\
+    document\_type & TEXT & NÃO & \texttt{CPF} ou \texttt{CNPJ} (\textit{check constraint}) \\
+    address, city, state, zip\_code & TEXT & SIM & Endereço do cliente \\
+    is\_active & BOOLEAN & NÃO & Flag de ativação \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    deleted\_at & TIMESTAMP & SIM & Exclusão lógica (\textit{soft delete}) \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+O índice único composto em (\texttt{document}, \texttt{tenant\_id}), com condição \texttt{WHERE deleted\_at IS NULL}, impede o cadastro duplicado de um mesmo documento dentro do \textit{tenant}, ao mesmo tempo em que permite recadastrar um documento cujo registro anterior foi excluído logicamente.
+
+\subsection{Tabela products}
+\label{sec:tabela-products}
+
+A Tabela~\ref{tab:tabela-products} apresenta a estrutura da tabela \texttt{products}, que armazena o catálogo de produtos e serviços de cada \textit{tenant}.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{products}.}
+  \label{tab:tabela-products}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
+    name, description & TEXT & SIM & Nome e descrição do produto \\
+    price & NUMERIC & NÃO & Preço unitário \\
+    price\_type & TEXT & NÃO & Tipo de precificação (padrão: \texttt{unit}) \\
+    stock & INTEGER & NÃO & Quantidade em estoque (padrão: 0) \\
+    sku, category & TEXT & SIM & Código e categoria do produto \\
+    image\_url & TEXT & SIM & Referência da imagem do produto \\
+    is\_active & BOOLEAN & NÃO & Flag de ativação \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    deleted\_at & TIMESTAMP & SIM & Exclusão lógica (\textit{soft delete}) \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+O campo \texttt{price\_type} distingue formas de precificação (por unidade, por metro quadrado, entre outras), refletido posteriormente no cálculo de itens de orçamento por meio dos campos de medida da tabela \texttt{quote\_items}.
+
+\subsection{Tabela quotes}
+\label{sec:tabela-quotes}
+
+A Tabela~\ref{tab:tabela-quotes} apresenta a estrutura da tabela \texttt{quotes}, que armazena os orçamentos emitidos.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{quotes}.}
+  \label{tab:tabela-quotes}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id, client\_id, user\_id & UUID & NÃO & FK para \texttt{tenants}, \texttt{clients} e \texttt{users} \\
+    subtotal, discount, total\_value & NUMERIC & NÃO & Valores calculados automaticamente \\
+    payment\_method & TEXT(24) & NÃO & Forma de pagamento (padrão: \texttt{pix}) \\
+    discount\_percent & NUMERIC & NÃO & Percentual de desconto (0--100) \\
+    installment\_count & INTEGER & NÃO & Número de parcelas (0 = à vista) \\
+    status & TEXT & NÃO & \texttt{draft}, \texttt{pending}, \texttt{sent}, \texttt{approved}, \texttt{rejected}, \texttt{cancelled} \\
+    work\_status & TEXT(40) & SIM & Andamento da obra após aprovação \\
+    notes & TEXT & SIM & Observações \\
+    approved\_at & TIMESTAMP & SIM & Data da aprovação comercial \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+O campo \texttt{status} representa o ciclo comercial do orçamento, enquanto \texttt{work\_status} representa o andamento da execução da obra após a aprovação -- os dois campos evoluem de forma independente e são inicializados automaticamente quando o orçamento é aprovado pela primeira vez, conforme detalhado no Diagrama de Atividades (Figura~\ref{fig:diagrama-atividades}).
+
+\subsection{Tabela quote\_items}
+\label{sec:tabela-quote-items}
+
+A Tabela~\ref{tab:tabela-quote-items} apresenta a estrutura da tabela \texttt{quote\_items}, que armazena os itens de cada orçamento.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{quote\_items}.}
+  \label{tab:tabela-quote-items}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id, quote\_id, product\_id & UUID & NÃO & FK para \texttt{tenants}, \texttt{quotes} e \texttt{products} \\
+    width\_cm, height\_cm, thickness, area\_m2 & NUMERIC & SIM & Medidas da peça \\
+    unit\_price, quantity, total & NUMERIC & NÃO & Preço unitário, quantidade e total da linha \\
+    edge\_type & TEXT & SIM & Tipo de acabamento de borda \\
+    has\_cutout & BOOLEAN & NÃO & Indica presença de recorte \\
+    reference\_image, notes & TEXT & SIM & Imagem de referência e observações \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+O campo \texttt{quantity} aceita valores fracionários para suportar precificação por área (m\textsuperscript{2}), e o campo \texttt{total} é calculado no momento da criação do item (Figura~\ref{fig:sequencia-orcamento}) a partir do preço unitário e da quantidade.
+
+\subsection{Tabela audits}
+\label{sec:tabela-audits}
+
+A Tabela~\ref{tab:tabela-audits} apresenta a estrutura da tabela \texttt{audits}, que registra o histórico de operações realizadas no sistema.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{audits}.}
+  \label{tab:tabela-audits}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
+    user\_id & UUID & SIM & FK para \texttt{users.id} (\texttt{SET NULL} ao excluir o usuário) \\
+    user\_name, user\_email, user\_role & TEXT & SIM & \textit{Snapshot} do autor no momento da ação \\
+    module & TEXT & NÃO & \texttt{auth}, \texttt{tenant}, \texttt{user}, \texttt{client}, \texttt{product}, \texttt{quote}, \texttt{settings}, \texttt{reports} \\
+    action & TEXT & NÃO & \texttt{create}, \texttt{update}, \texttt{delete}, \texttt{login}, \texttt{logout} \\
+    object\_id, object\_name & TEXT & SIM & Identificação do recurso afetado \\
+    method, path, ip, user\_agent & TEXT & SIM & Contexto da requisição HTTP \\
+    status\_code & INTEGER & SIM & Código de resposta HTTP \\
+    payload & JSON & SIM & Corpo da requisição, quando aplicável \\
+    created\_at & TIMESTAMP & NÃO & Data/hora do evento \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+Os campos \texttt{user\_name}, \texttt{user\_email} e \texttt{user\_role} preservam um \textit{snapshot} textual do autor da ação no momento em que ela ocorreu, garantindo que o histórico permaneça legível mesmo que o usuário correspondente seja posteriormente removido (a chave estrangeira \texttt{user\_id} é anulada nesse caso, mas os campos de \textit{snapshot} são preservados).
+
+\subsection{Tabela waitlist\_leads}
+\label{sec:tabela-waitlist-leads}
+
+A Tabela~\ref{tab:tabela-waitlist-leads} apresenta a estrutura da tabela \texttt{waitlist\_leads}, que armazena os contatos captados pela \textit{landing page} institucional.
+
+\begin{table}[H]
+  \centering
+  \caption{Estrutura da tabela \texttt{waitlist\_leads}.}
+  \label{tab:tabela-waitlist-leads}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+    \hline
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \hline
+    id & UUID & NÃO & Chave primária \\
+    name & TEXT & NÃO & Nome do interessado \\
+    whatsapp & TEXT & NÃO & Número de WhatsApp (índice único) \\
+    state & TEXT(2) & NÃO & Unidade federativa \\
+    company\_size & TEXT & NÃO & Porte da equipe da marmoraria \\
+    quotes\_avg & TEXT & NÃO & Volume médio de orçamentos emitidos \\
+    source & TEXT & NÃO & Origem do cadastro (padrão: \texttt{landing}) \\
+    created\_at, updated\_at & TIMESTAMP & NÃO & Auditoria de criação/atualização \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
+
+Esta tabela não possui \texttt{tenant\_id}: por se tratar de captação de leads pré-venda, os registros ainda não pertencem a nenhuma empresa cadastrada no sistema. O índice único em \texttt{whatsapp} impede cadastros duplicados, retornando HTTP 409 quando o número já existe (UC12).
+
+\subsection{Considerações sobre Privacidade e Segurança}
+\label{sec:privacidade-modelo-dados}
+
+Os dados armazenados nas tabelas \texttt{clients} (CPF/CNPJ, endereço, contato) e \texttt{users} (nome, e-mail) são considerados dados pessoais segundo a Lei Geral de Proteção de Dados (LGPD -- Lei 13.709/2018). O sistema implementa as seguintes medidas de conformidade:
+
+\begin{itemize}
+\item \textbf{Finalidade específica:} documentos e dados de contato de clientes são coletados exclusivamente para emissão de orçamentos e relacionamento comercial da marmoraria com seus próprios clientes.
+\item \textbf{Isolamento por tenant:} cada empresa acessa exclusivamente os dados de seus próprios clientes e usuários, reforçado pelo \texttt{tenant\_id} presente em toda tabela de negócio (RNF02).
+\item \textbf{Minimização e exclusão lógica:} campos de endereço são opcionais, e a exclusão de um cliente ou produto é lógica (\texttt{deleted\_at}), preservando o histórico de orçamentos já emitidos sem expor o registro nas listagens ativas.
+\item \textbf{Controle de acesso:} senhas são armazenadas apenas como hash bcrypt (nunca em texto plano), e o banco de dados é acessível apenas pela aplicação, por meio de credenciais configuradas em variáveis de ambiente.
+\item \textbf{Rastreabilidade:} toda operação de criação, atualização e exclusão sobre dados de clientes e usuários é registrada na tabela \texttt{audits} (UC09), permitindo auditoria de acessos.
+\end{itemize}
 
 \section{Modelagem do Sistema}
 \label{sec:modelagem-sistema}
@@ -170,6 +600,195 @@ O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as in
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
+
+
+\subsubsection{Casos de Uso Principais}
+\label{sec:casos-uso-principais}
+
+Esta subseção detalha os doze casos de uso identificados no diagrama da Figura~\ref{fig:diagrama-casos-uso}, especificando ator, descrição, pré-condição, fluxo principal e, quando aplicável, fluxo alternativo e pós-condição.
+
+\medskip
+\noindent\textbf{UC01 -- Autenticar-se (login)}\\
+\textbf{Ator:} Administrador, Colaborador.\\
+\textbf{Descrição:} usuário informa e-mail e senha; o sistema valida as credenciais e emite tokens de acesso.\\
+\textbf{Pré-condição:} usuário possui conta ativa em um \textit{tenant}.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário acessa a tela de login e informa e-mail e senha.
+  \item Sistema consulta o usuário pelo e-mail.
+  \item Sistema verifica a senha através de hash bcrypt.
+  \item Sistema emite \textit{access token} e \textit{refresh token} (JWT) com \textit{claims} de \texttt{user\_id}, \texttt{tenant\_id}, e-mail, papel e permissões.
+  \item \textit{Frontend} persiste os tokens e o \texttt{tenant\_id}.
+  \item Sistema redireciona o usuário para o \textit{dashboard}.
+\end{enumerate}
+\textbf{Fluxo Alternativo -- Credenciais inválidas:} no passo 3, o sistema retorna erro genérico de credenciais inválidas, sem revelar se o e-mail está cadastrado.\\
+\textbf{Pós-condição:} usuário autenticado; requisições seguintes enviam \texttt{Authorization: Bearer <token>} (ver Figura~\ref{fig:sequencia-login}).
+
+\medskip
+\noindent\textbf{UC02 -- Provisionar nova empresa}\\
+\textbf{Ator:} Visitante.\\
+\textbf{Descrição:} cria uma nova empresa (\textit{tenant}) e o respectivo usuário administrador em uma única operação, por meio do \textit{endpoint} público \texttt{/auth/provision}.\\
+\textbf{Pré-condição:} nenhuma (\textit{endpoint} público).\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário preenche dados da empresa (razão social, CNPJ) e do administrador (nome, e-mail, senha).
+  \item Sistema cria o \textit{tenant} com o plano selecionado (padrão: \textit{essencial}).
+  \item Sistema cria o usuário administrador vinculado ao \textit{tenant}.
+  \item Sistema retorna tokens de autenticação, autenticando automaticamente o administrador recém-criado.
+\end{enumerate}
+\textbf{Pós-condição:} novo \textit{tenant} ativo e administrador autenticado, pronto para uso do sistema.
+
+\medskip
+\noindent\textbf{UC03 -- Gerenciar clientes}\\
+\textbf{Ator:} Administrador, Colaborador (com permissão).\\
+\textbf{Descrição:} cadastro, edição, listagem e exclusão lógica de clientes pessoa física ou jurídica.\\
+\textbf{Pré-condição:} usuário autenticado com permissão sobre o módulo de clientes.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário acessa a listagem de clientes do \textit{tenant}.
+  \item Usuário cadastra um novo cliente informando nome, documento (CPF/CNPJ), contato e endereço.
+  \item Sistema valida o documento (dígito verificador) e a unicidade por \textit{tenant}.
+  \item Sistema persiste o cliente.
+\end{enumerate}
+\textbf{Fluxo Alternativo -- Documento inválido ou duplicado:} no passo 3, o sistema rejeita o cadastro e exibe mensagem de erro.\\
+\textbf{Pós-condição:} cliente disponível para vinculação a orçamentos (UC05).
+
+\medskip
+\noindent\textbf{UC04 -- Gerenciar produtos}\\
+\textbf{Ator:} Administrador, Colaborador (com permissão).\\
+\textbf{Descrição:} cadastro, edição, listagem e exclusão do catálogo de produtos e serviços da marmoraria.\\
+\textbf{Pré-condição:} usuário autenticado com permissão sobre o módulo de produtos.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário acessa a listagem de produtos.
+  \item Usuário cadastra ou edita um produto (nome, preço, categoria, SKU, estoque).
+  \item Usuário pode enviar uma imagem do produto (\textit{«include»} UC06).
+  \item Sistema persiste o produto.
+\end{enumerate}
+\textbf{Pós-condição:} produto disponível para composição de orçamentos (UC05).
+
+\medskip
+\noindent\textbf{UC05 -- Gerenciar orçamentos}\\
+\textbf{Ator:} Administrador, Colaborador (com permissão).\\
+\textbf{Descrição:} criação e acompanhamento de orçamentos, vinculando cliente e itens (produto, medidas, quantidade), com cálculo automático de valores e acompanhamento do status comercial e da execução da obra.\\
+\textbf{Pré-condição:} usuário autenticado; cliente e produtos previamente cadastrados.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário seleciona um cliente e adiciona itens ao orçamento (produto, medidas, quantidade).
+  \item Sistema calcula subtotal, desconto e valor total automaticamente (ver Figura~\ref{fig:sequencia-orcamento}).
+  \item Usuário define as condições de pagamento e submete o orçamento.
+  \item Sistema persiste o orçamento e seus itens.
+  \item Usuário acompanha e atualiza o status comercial (pendente, enviado, aprovado, rejeitado, cancelado) e o andamento da obra, conforme o fluxo detalhado na Figura~\ref{fig:diagrama-atividades}.
+\end{enumerate}
+\textbf{Pós-condição:} orçamento disponível na listagem, com histórico auditável de mudanças de status (UC09).
+
+\medskip
+\noindent\textbf{UC06 -- Enviar imagem (logo/avatar/produto)}\\
+\textbf{Ator:} Administrador, Colaborador.\\
+\textbf{Descrição:} envio de imagens ao sistema (logo da empresa, avatar do usuário ou fotos de produto) por meio de URL assinada.\\
+\textbf{Pré-condição:} usuário autenticado.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário seleciona uma imagem.
+  \item Sistema gera e devolve uma URL assinada de \textit{upload} (HMAC-SHA256, expiração curta).
+  \item \textit{Frontend} envia o arquivo diretamente à URL assinada.
+  \item Sistema valida o \textit{token} e grava o arquivo (ver Figura~\ref{fig:sequencia-upload}).
+  \item Sistema associa a referência da imagem (\texttt{object\_key}) à entidade correspondente.
+\end{enumerate}
+\textbf{Pós-condição:} imagem disponível para exibição por meio de URL de leitura.
+
+\medskip
+\noindent\textbf{UC07 -- Configurar empresa}\\
+\textbf{Ator:} Administrador.\\
+\textbf{Descrição:} edição de dados e preferências da empresa, incluindo o logo institucional.\\
+\textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Administrador acessa a tela de configurações.
+  \item Administrador edita dados da empresa e, opcionalmente, envia novo logo (\textit{«include»} UC06).
+  \item Sistema persiste as alterações.
+\end{enumerate}
+\textbf{Pós-condição:} configurações atualizadas refletidas em toda a aplicação.
+
+\medskip
+\noindent\textbf{UC08 -- Consultar indicadores (dashboard)}\\
+\textbf{Ator:} Administrador, Colaborador.\\
+\textbf{Descrição:} visualização de painel com indicadores consolidados do negócio.\\
+\textbf{Pré-condição:} usuário autenticado.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário acessa o \textit{dashboard}.
+  \item Sistema consulta indicadores agregados do \textit{tenant} (orçamentos por status, clientes ativos, entre outros).
+  \item Sistema exibe o painel com gráficos e métricas.
+\end{enumerate}
+\textbf{Pós-condição:} usuário informado sobre a situação atual do negócio.
+
+\medskip
+\noindent\textbf{UC09 -- Consultar auditoria}\\
+\textbf{Ator:} Administrador.\\
+\textbf{Descrição:} consulta ao log de auditoria das operações realizadas no sistema, com filtros por módulo, ação e usuário.\\
+\textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Administrador acessa a tela de auditoria.
+  \item Administrador aplica filtros (módulo, ação, usuário, período).
+  \item Sistema retorna os registros correspondentes, previamente gravados de forma automática pelo \textit{middleware} de auditoria a cada operação de criação, atualização, exclusão, login ou logout.
+\end{enumerate}
+\textbf{Pós-condição:} administrador informado sobre o histórico de ações no sistema.
+
+\medskip
+\noindent\textbf{UC10 -- Gerenciar usuários}\\
+\textbf{Ator:} Administrador.\\
+\textbf{Descrição:} cadastro, edição e desativação de usuários internos do \textit{tenant}, com definição de papel e permissões.\\
+\textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Administrador acessa a listagem de usuários do \textit{tenant}.
+  \item Administrador cadastra um novo usuário informando nome, e-mail, senha inicial e papel (\textit{admin}, \textit{manager} ou \textit{employee}).
+  \item Sistema valida o limite de usuários do plano contratado.
+  \item Sistema persiste o novo usuário.
+\end{enumerate}
+\textbf{Fluxo Alternativo -- Limite do plano atingido:} no passo 3, o sistema rejeita o cadastro informando que o limite de usuários do plano foi atingido.\\
+\textbf{Pós-condição:} novo usuário habilitado a autenticar-se no sistema (UC01).
+
+\medskip
+\noindent\textbf{UC11 -- Sugerir/gerir itens do roadmap}\\
+\textbf{Ator:} Administrador, Colaborador (sugestão); Administrador (gestão do status).\\
+\textbf{Descrição:} usuários registram sugestões de melhoria (\textit{ideário}); o administrador acompanha e gerencia o status dos itens.\\
+\textbf{Pré-condição:} usuário autenticado.\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Usuário registra uma sugestão de melhoria.
+  \item Sistema persiste a sugestão, vinculada ao \textit{tenant} e ao usuário autor.
+  \item Administrador consulta e atualiza o status das sugestões.
+\end{enumerate}
+\textbf{Pós-condição:} sugestão disponível para acompanhamento por toda a equipe do \textit{tenant}.
+
+\medskip
+\noindent\textbf{UC12 -- Cadastrar-se na lista de espera}\\
+\textbf{Ator:} Visitante.\\
+\textbf{Descrição:} visitante da \textit{landing page} se cadastra para receber contato antes do lançamento comercial completo.\\
+\textbf{Pré-condição:} nenhuma (\textit{endpoint} público).\\
+\textbf{Fluxo Principal:}
+\begin{enumerate}
+  \item Visitante preenche formulário com nome, WhatsApp, estado, porte da equipe e volume médio de orçamentos.
+  \item Sistema persiste o \textit{lead} na tabela \texttt{waitlist\_leads}.
+\end{enumerate}
+\textbf{Fluxo Alternativo -- WhatsApp já cadastrado:} no passo 2, o sistema responde HTTP 409 e a interface informa o visitante.\\
+\textbf{Pós-condição:} \textit{lead} registrado para contato futuro.
+
+\subsubsection{Relacionamentos entre Casos de Uso}
+\label{sec:relacionamentos-casos-uso}
+
+O diagrama apresenta os seguintes relacionamentos entre casos de uso, identificados a partir do comportamento real da aplicação:
+
+\begin{itemize}
+\item \textit{«include»}: UC02 (Provisionar nova empresa) \textit{«include»} UC01 (Autenticar-se) -- o provisionamento retorna os mesmos tokens de autenticação emitidos no login, autenticando automaticamente o administrador recém-criado, sem exigir uma segunda submissão de credenciais.
+\item \textit{«include»}: UC04 (Gerenciar produtos) \textit{«include»} UC06 (Enviar imagem) -- o cadastro de um produto pode incluir o envio de uma fotografia associada.
+\item \textit{«include»}: UC07 (Configurar empresa) \textit{«include»} UC06 (Enviar imagem) -- a atualização dos dados da empresa pode incluir o envio de um novo logo.
+\end{itemize}
+
+Diferentemente de sistemas com fluxos condicionais mais elaborados, o conjunto de casos de uso do Onmarmoraria não apresenta relacionamentos \textit{«extend»} relevantes: os fluxos opcionais, como o cancelamento de um orçamento, são tratados como transições de estado dentro do próprio caso de uso (UC05), documentadas no Diagrama de Atividades (Figura~\ref{fig:diagrama-atividades}), e não como funcionalidades independentes que estendem um caso de uso base.
 
 \subsection{Diagrama de Classes}
 \label{sec:diagrama-classes}
@@ -268,104 +887,12 @@ O diagrama de classes (Figura~\ref{fig:diagrama-classes}) representa as entidade
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-\subsection{Diagrama de Entidade-Relacionamento}
-\label{sec:diagrama-er}
 
-O diagrama entidade-relacionamento (Figura~\ref{fig:diagrama-er}) descreve o esquema relacional persistido no PostgreSQL, com as respectivas chaves primárias (PK), chaves estrangeiras (FK) e cardinalidades. Todas as tabelas de negócio carregam \texttt{tenant\_id}, reforçando o isolamento \textit{multi-tenant} também no nível de dados (RNF02).
-
-\begin{figure}[H]
-  \centering
-  \captionsetup{justification=centering}
-  \caption{Diagrama de entidade-relacionamento do banco de dados.}
-  \label{fig:diagrama-er}
-  \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  tbl/.style={
-    rectangle split, rectangle split parts=2, draw, align=left,
-    font=\footnotesize, rectangle split part align={left,left},
-    text width=3.5cm, inner sep=3pt
-  },
-  every edge/.style={draw, -{Latex[length=1.8mm]}, thick}
-]
-
-\node[tbl] (tenants) at (0,8) {
-  \textbf{tenants}
-  \nodepart{second} \underline{PK id} \\ company\_name \\ cnpj \\ plan, status \\ billing\_active
-};
-
-\node[tbl] (users) at (7,8) {
-  \textbf{users}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, email \\ password\_hash \\ role, status \\ permissions (json)
-};
-
-\node[tbl] (clients) at (0,3.2) {
-  \textbf{clients}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, document \\ document\_type \\ address, city, state \\ is\_active
-};
-
-\node[tbl] (products) at (7,3.2) {
-  \textbf{products}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, price \\ price\_type, stock \\ sku, category \\ is\_active
-};
-
-\node[tbl] (quotes) at (0,-2.2) {
-  \textbf{quotes}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK client\_id \\ FK user\_id \\ subtotal, discount \\ total\_value \\ status, work\_status
-};
-
-\node[tbl] (quoteitems) at (7,-2.2) {
-  \textbf{quote\_items}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK quote\_id \\ FK product\_id \\ width\_cm, height\_cm \\ unit\_price, quantity \\ total
-};
-
-\node[tbl] (audits) at (0,-7.6) {
-  \textbf{audits}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK user\_id (nullable) \\ module, action \\ object\_id, object\_name \\ status\_code
-};
-
-\node[tbl] (leads) at (7,-7.6) {
-  \textbf{waitlist\_leads}
-  \nodepart{second} \underline{PK id} \\ name, whatsapp (unique) \\ state \\ company\_size \\ quotes\_avg \\ source
-};
-
-% Relacionamentos (crow's foot simplificado com rótulos 1/N)
-\draw (tenants.south) to["1"] ["N"'] (users.north);
-\draw (tenants) to[bend right=10, "1"] ["N"'] (clients);
-\draw (tenants) to[bend left=10, "1"] ["N"'] (products);
-% Spine à esquerda (x=-3.4), fora de todas as caixas, para tenants->quotes e tenants->audits
-\draw (tenants.west) -| ++(-3.4,0) node[pos=0.15, above, font=\scriptsize] {1}
-      |- ($(quotes.west)+(-1.55,0)$) -- (quotes.west);
-\node[font=\scriptsize] at (-3.65,-2.0) {N};
-\draw (tenants.west) -| ++(-4.3,0)
-      |- ($(audits.west)+(-2.45,0)$) -- (audits.west);
-\node[font=\scriptsize] at (-4.55,-7.4) {N};
-\draw (clients.south) to["1"] ["N"'] (quotes.north);
-\draw (users) to[bend left=15, "1"] ["N"'] (quotes);
-% Spine à direita (x=9.6) para users->audits, contornando quote_items
-\draw (users.east) -| ++(1.0,-0.3) node[pos=0.2, above, font=\scriptsize] {0..1}
-      |- ($(audits.east)+(1.9,0)$) -- (audits.east);
-\node[font=\scriptsize] at (9.85,-7.4) {N};
-\draw (quotes.south) to["1"] ["N"'] (quoteitems.north);
-\draw (products) to[bend right=15, "1"] ["N"'] (quoteitems);
-
-\node[font=\scriptsize, align=left, anchor=north west] at (10.7,8) {
-  \textbf{Legenda}\\
-  PK = chave primária\\
-  FK = chave estrangeira\\
-  1 / N = cardinalidade\\
-  (isolamento multi-tenant:\\ toda tabela de negócio\\ carrega tenant\_id)
-};
-
-\end{tikzpicture}
-}
-\end{figure}
-{\centering\small Fonte: O Autor, 2026.\par}
-\vspace{0.8em}
 
 \subsection{Diagramas de Sequência}
 \label{sec:diagramas-sequencia}
 
-Foram elaborados dois diagramas de sequência para os fluxos mais representativos do sistema: a autenticação de usuários (RF01) e o envio de arquivos por URL assinada (RF09), este último detalhando especificamente o backend de armazenamento local adotado como padrão (Subseção~\ref{sec:armazenamento-imagens}).
+Foram elaborados três diagramas de sequência para os fluxos mais representativos do sistema: a autenticação de usuários (RF01), o envio de arquivos por URL assinada (RF09) -- este último detalhando especificamente o backend de armazenamento local adotado como padrão (Subseção~\ref{sec:armazenamento-imagens}) -- e a criação de um orçamento (RF06, RF07), o fluxo de negócio mais complexo do sistema.
 
 A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir da requisição do \textit{frontend}, passando pelo caso de uso de autenticação, pela consulta ao repositório de usuários no PostgreSQL, pela verificação de senha com bcrypt e pela emissão dos tokens JWT.
 
@@ -476,6 +1003,147 @@ A Figura~\ref{fig:sequencia-upload} descreve o fluxo de envio de imagem usando o
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
+
+
+A Figura~\ref{fig:sequencia-orcamento} descreve o fluxo de criação de um orçamento (UC05): a partir da submissão do \textit{frontend}, passando pela validação da requisição, pelo cálculo automático de subtotal e desconto, pela persistência do orçamento e, em seguida, de cada item vinculado.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Diagrama de sequência: criação de orçamento.}
+  \label{fig:sequencia-orcamento}
+  \resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  actorbox/.style={draw, fill=black!5, minimum width=2.7cm, minimum height=0.8cm, align=center, font=\small\bfseries},
+  lifeline/.style={dashed, draw=black!60},
+  msg/.style={-{Latex[length=2.2mm]}, draw, font=\scriptsize},
+  ret/.style={-{Latex[length=2.2mm]}, draw, dashed, font=\scriptsize}
+]
+
+\def\ytop{0}
+\def\ybot{-14.6}
+
+\node[actorbox] (fe)  at (0,\ytop)   {Frontend\\(Dashboard)};
+\node[actorbox] (h)   at (4.6,\ytop) {QuoteHandler};
+\node[actorbox] (uc)  at (9.2,\ytop) {UseCase\\Quote};
+\node[actorbox] (qr)  at (13.8,\ytop){QuoteRepository};
+\node[actorbox] (ir)  at (18.4,\ytop){ItemRepository};
+\node[actorbox] (db)  at (23.0,\ytop){PostgreSQL};
+
+\foreach \n in {fe,h,uc,qr,ir,db}{
+  \draw[lifeline] (\n.south) -- ($(\n.south)+(0,\ybot)$);
+}
+
+\draw[msg] ($(fe.south)+(0,-1)$) -- node[above,align=center,font=\scriptsize]{POST /api/v1/quotes\\\{client\_id, items[], payment\_method, ...\}} ($(h.south)+(0,-1)$);
+\draw[msg] ($(h.south)+(0,-2.1)$) -- node[above,font=\scriptsize]{Create(ctx, dto)} ($(uc.south)+(0,-2.1)$);
+
+\node[font=\scriptsize, align=left] at (9.2,-3.1) {[uc] req.Validate()};
+
+\node[font=\scriptsize, align=left] at (9.2,-4.3) {[uc] soma LineTotal() de cada item = subtotal\\{} [uc] ComputeDiscountAndTotal(subtotal, desconto\%) = total};
+
+\draw[msg] ($(uc.south)+(0,-5.5)$) -- node[above,font=\scriptsize]{Create(quote)} ($(qr.south)+(0,-5.5)$);
+\draw[msg] ($(qr.south)+(0,-6.5)$) -- node[above,font=\scriptsize]{INSERT INTO quotes ...} ($(db.south)+(0,-6.5)$);
+\draw[ret]  ($(db.south)+(0,-7.4)$) -- node[above,font=\scriptsize]{ok (id gerado)} ($(qr.south)+(0,-7.4)$);
+\draw[ret]  ($(qr.south)+(0,-8.2)$) -- node[above,font=\scriptsize]{quote} ($(uc.south)+(0,-8.2)$);
+
+\node[font=\scriptsize, align=left] at (9.2,-9.1) {[uc] para cada item do orçamento:};
+
+\draw[msg] ($(uc.south)+(0,-10.0)$) -- node[above,font=\scriptsize]{Create(item)} ($(ir.south)+(0,-10.0)$);
+\draw[msg] ($(ir.south)+(0,-10.9)$) -- node[above,font=\scriptsize]{INSERT INTO quote\_items ...} ($(db.south)+(0,-10.9)$);
+\draw[ret]  ($(db.south)+(0,-11.7)$) -- node[above,font=\scriptsize]{ok} ($(ir.south)+(0,-11.7)$);
+\draw[ret]  ($(ir.south)+(0,-12.4)$) -- node[above,font=\scriptsize]{item} ($(uc.south)+(0,-12.4)$);
+
+\draw[ret] ($(uc.south)+(0,-13.3)$) -- node[above,font=\scriptsize]{Quote (com itens)} ($(h.south)+(0,-13.3)$);
+\draw[ret] ($(h.south)+(0,-14.2)$) -- node[above,align=center,font=\scriptsize]{201 Created} ($(fe.south)+(0,-14.2)$);
+
+\end{tikzpicture}
+}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\subsection{Diagrama de Atividades}
+\label{sec:diagrama-atividades}
+
+O diagrama de atividades documenta o fluxo de estados de um orçamento (UC05) ao longo de seu ciclo de vida completo, desde a criação em rascunho até a conclusão da obra, incluindo o ponto de decisão comercial (aprovação ou rejeição pelo cliente) e o fluxo alternativo de cancelamento. A Figura~\ref{fig:diagrama-atividades} apresenta o diagrama, construído a partir da máquina de estados real implementada pelos campos \texttt{status} e \texttt{work\_status} da tabela \texttt{quotes} (Seção~\ref{sec:tabela-quotes}) e pela lógica do método \texttt{UpdateStatus} do caso de uso de orçamentos.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  \caption{Diagrama de atividades do ciclo de vida do orçamento.}
+  \label{fig:diagrama-atividades}
+  \resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  act/.style={draw, rounded corners, minimum width=4.6cm, minimum height=0.9cm, align=center, font=\small, fill=black!3},
+  dec/.style={draw, diamond, aspect=2.2, align=center, font=\scriptsize, inner sep=2pt},
+  every path/.style={draw, -{Latex[length=2.2mm]}}
+]
+
+% Início
+\node[circle, fill=black, minimum size=0.32cm, inner sep=0pt] (start) at (0,0) {};
+\node[act] (criar) at (0,-1.3) {Criar orçamento\\(status = \texttt{draft})};
+\node[act] (itens) at (0,-2.9) {Adicionar itens\\(produto, medidas, quantidade)};
+\node[act] (submeter) at (0,-4.5) {Submeter orçamento\\(status = \texttt{pending})};
+\node[act] (enviar) at (0,-6.1) {Enviar ao cliente\\(status = \texttt{sent})};
+
+\node[dec] (decisao) at (0,-8.0) {Cliente\\aprova?};
+
+\node[act] (rejeitado) at (-5.2,-8.0) {status = \texttt{rejected}};
+\node[circle, draw, minimum size=0.32cm, inner sep=0pt] (endrej) at (-5.2,-9.4) {};
+\node[circle, fill=black, minimum size=0.16cm, inner sep=0pt] at (-5.2,-9.4) {};
+
+\node[act] (aprovado) at (0,-9.7) {status = \texttt{approved}};
+\node[dec] (decisaowk) at (0,-11.4) {work\_status\\já definido?};
+\node[act] (initwk) at (5.6,-11.4) {work\_status =\\\texttt{not\_started}};
+
+\node[act] (agendado) at (0,-13.4) {Agendar execução\\(work\_status = \texttt{scheduled})};
+\node[act] (execucao) at (0,-15.0) {Executar obra\\(work\_status = \texttt{in\_progress} / \texttt{executing})};
+\node[act] (concluido) at (0,-16.6) {Concluir obra\\(work\_status = \texttt{completed} / \texttt{done})};
+
+\node[circle, draw, minimum size=0.32cm, inner sep=0pt] (endok) at (0,-18.0) {};
+\node[circle, fill=black, minimum size=0.16cm, inner sep=0pt] at (0,-18.0) {};
+
+% fluxo principal
+\draw (start) -- (criar);
+\draw (criar) -- (itens);
+\draw (itens) -- (submeter);
+\draw (submeter) -- (enviar);
+\draw (enviar) -- (decisao);
+
+\draw (decisao) -- node[left, font=\scriptsize] {não} (rejeitado);
+\draw (rejeitado) -- (endrej);
+
+\draw (decisao) -- node[right, font=\scriptsize] {sim} (aprovado);
+\draw (aprovado) -- (decisaowk);
+\draw (decisaowk) -- node[above, font=\scriptsize] {não} (initwk);
+\draw (initwk) |- (agendado);
+\draw (decisaowk) -- node[left, font=\scriptsize] {sim} (agendado);
+\draw (agendado) -- (execucao);
+\draw (execucao) -- (concluido);
+\draw (concluido) -- (endok);
+
+% cancelamento (pode ocorrer em qualquer etapa antes da conclusão)
+\node[act] (cancelado) at (5.6,-4.5) {status = \texttt{cancelled}};
+\node[circle, draw, minimum size=0.32cm, inner sep=0pt] (endcanc) at (5.6,-6.3) {};
+\node[circle, fill=black, minimum size=0.16cm, inner sep=0pt] at (5.6,-6.3) {};
+\draw[dashed] (submeter.east) -- node[above, font=\scriptsize] {cancelar} (cancelado.west);
+\draw[dashed] (cancelado) -- (endcanc);
+
+\node[font=\scriptsize, align=left, anchor=north west] at (7.2,-0.4) {
+  \textbf{Legenda}\\
+  \tikz[baseline=-0.5ex]{\node[circle, fill=black, minimum size=0.25cm, inner sep=0pt]{};} início\\
+  \tikz[baseline=-0.5ex]{\node[circle, draw, minimum size=0.25cm, inner sep=0pt]{}; \node[circle, fill=black, minimum size=0.12cm, inner sep=0pt]{};} fim\\
+  \tikz[baseline=-0.5ex]{\node[draw, diamond, aspect=2, minimum width=0.5cm, minimum height=0.3cm, inner sep=0pt]{};} decisão\\
+  linha tracejada = fluxo\\ alternativo (cancelamento)
+};
+
+\end{tikzpicture}
+}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+O fluxo principal segue da esquerda para a direita em quatro estágios: (1) elaboração, em que o orçamento é criado como rascunho e recebe seus itens; (2) submissão, em que o orçamento passa a pendente e é enviado ao cliente; (3) decisão comercial, em que o cliente aprova ou rejeita a proposta; e (4) execução, restrita aos orçamentos aprovados, em que o sistema inicializa automaticamente o andamento da obra como ``não iniciado'' -- caso ainda não tenha sido definido -- e o acompanha até a conclusão. O fluxo de cancelamento, representado pela linha tracejada, pode ocorrer a partir do momento em que o orçamento é submetido, refletindo o comportamento real da API, que aceita a transição para \texttt{cancelled} a partir de qualquer status não finalizado.
 
 \section{Etapas do Desenvolvimento}
 O desenvolvimento do sistema ERP para marmorarias foi estruturado em etapas progressivas, iniciando pelo planejamento inicial e avançando pela definição da arquitetura, implementação das funcionalidades e validação do protótipo. A abordagem priorizou modularidade, escalabilidade e segurança, permitindo que o sistema evoluísse de forma consistente ao longo do projeto.
