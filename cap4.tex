@@ -46,13 +46,29 @@ Complementarmente aos testes funcionais descritos na Seção~4.3, o painel foi a
 
 \subsection{Dispositivos Utilizados}
 
-% TODO(Marcelo): preencher com o(s) modelo(s) exato(s) e navegador(es) usados nos testes,
-% por exemplo: "iPhone 13 (Safari, iOS 18)" e "Samsung Galaxy S23 (Chrome, Android 14)".
-\begin{itemize}
-  \item Desktop: navegador Chrome/Safari (macOS), resoluções widescreen (\textgreater{}1400px) e notebook (\textasciitilde{}1280px);
-  \item iOS: [\textit{completar com modelo do iPhone e versão do Safari/iOS utilizados}];
-  \item Android: [\textit{completar com modelo do aparelho e versão do Chrome/Android utilizados}].
-\end{itemize}
+A Tabela~\ref{tab:dispositivos-testados} relaciona os dispositivos e navegadores utilizados nesta rodada de testes.
+
+% TODO(Marcelo): completar a coluna "Dispositivo / SO" das linhas iOS e Android
+% com o modelo exato e a versão do sistema, por exemplo: "iPhone 13 (iOS 18)" e
+% "Samsung Galaxy S23 (Android 14)".
+\begin{table}[H]
+  \centering
+  \caption{Dispositivos e navegadores utilizados nos testes manuais de responsividade.}
+  \label{tab:dispositivos-testados}
+  \begin{tabular}{p{3cm}p{5.5cm}p{5.5cm}}
+    \hline
+    \textbf{Plataforma} & \textbf{Dispositivo / SO} & \textbf{Navegador} \\
+    \hline
+    Desktop & macOS, resoluções widescreen ($>$1400px) e notebook ($\sim$1280px) & Chrome e Safari \\
+    iOS & [\textit{completar com modelo do iPhone e versão do iOS}] & Safari \\
+    Android & [\textit{completar com modelo do aparelho e versão do Android}] & Chrome \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026.}
+  \end{minipage}
+\end{table}
 
 \section{Responsividade e Acessibilidade}
 
@@ -80,9 +96,9 @@ Esta seção documenta três falhas reais identificadas durante a validação em
 
 Ao subir o painel localmente para validação, a aplicação não renderizava nenhuma rota autenticada, falhando com erro de módulo não encontrado (\texttt{Module not found: Can't resolve '@/components/billing/SubscriptionGate'}). A investigação do histórico do repositório mostrou que um \textit{commit} anterior havia removido, de forma deliberada, toda a camada de controle de assinatura (\textit{billing}) --- decisão coerente com o escopo acadêmico do projeto, em que o acesso permanece aberto --- mas havia deixado um \textit{import} e um uso órfãos do componente removido no layout do painel. A correção consistiu em remover a referência remanescente, restabelecendo o funcionamento de toda a área autenticada.
 
-\subsection{Cadastro de cliente sem efeito}
+\subsection{Cadastro de cliente sem efeito (corrigido)}
 
-Durante uma nova rodada de validação em ambiente local, observou-se que o formulário de novo cliente do painel falhava silenciosamente ao salvar: a requisição \texttt{POST /api/v1/clients} retornava HTTP 400, com o corpo da resposta indicando erros de validação para os campos \texttt{DocumentType} e \texttt{TenantID}, ambos marcados como obrigatórios (\textit{tag} \texttt{required}) no \textit{DTO} de criação do \textit{backend}. A inspeção do \textit{payload} enviado pelo \textit{frontend} confirmou que o formulário do painel não inclui esses dois campos na requisição --- o tipo de documento (CPF ou CNPJ) não é inferido nem solicitado na interface, e o identificador do \textit{tenant} não é anexado ao corpo da requisição, ainda que já esteja disponível no token de autenticação. O \textit{modal} apenas exibia uma mensagem genérica de falha, sem indicar a causa ao usuário. A criação de um registro de teste só foi possível chamando a API diretamente com os dois campos preenchidos manualmente. A correção --- inferir o \texttt{document\_type} a partir do formato do documento informado e anexar o \texttt{tenant\_id} do contexto de autenticação antes do envio --- é registrada como pendente e discutida como limitação na Seção~\ref{sec:limitacoes} do Capítulo~\ref{cap5Discussao}.
+Durante uma nova rodada de validação em ambiente local, observou-se que o formulário de novo cliente do painel falhava silenciosamente ao salvar: a requisição \texttt{POST /api/v1/clients} retornava HTTP 400, com o corpo da resposta indicando erros de validação para os campos \texttt{DocumentType} e \texttt{TenantID}, ambos marcados como obrigatórios (\textit{tag} \texttt{required}) no \textit{DTO} de criação do \textit{backend}. A inspeção do \textit{payload} enviado pelo \textit{frontend} confirmou que o formulário do painel não inclui esses dois campos na requisição --- o tipo de documento (CPF ou CNPJ) não é inferido nem solicitado na interface, e o identificador do \textit{tenant} não é anexado ao corpo da requisição, ainda que já esteja disponível no token de autenticação. O \textit{modal} apenas exibia uma mensagem genérica de falha, sem indicar a causa ao usuário. A criação de um registro de teste só foi possível, nesse momento, chamando a API diretamente com os dois campos preenchidos manualmente. A correção foi então aplicada: o formulário passou a exigir e validar explicitamente o campo \textit{Tipo} (CPF/CNPJ), com verificação de dígito verificador no próprio \textit{frontend} antes do envio (\texttt{lib/validation/clientSchema.ts}), e o \texttt{tenant\_id} passou a ser anexado automaticamente a toda requisição de criação/atualização por uma função utilitária (\texttt{withTenantId}, em \texttt{lib/api/services.ts}) que o lê do contexto de autenticação, persistido no navegador após o \textit{login}. A correção foi revisada estaticamente contra o \textit{DTO} do \textit{backend} (\texttt{CreateClientDTO}, que exige exatamente os mesmos dois campos) e contra a suíte de \textit{lint} do \textit{frontend} (\texttt{eslint}), ambos sem apontamentos; a repetição do teste manual de ponta a ponta no painel, para confirmação final, fica registrada como verificação a ser reexecutada pelo autor antes da apresentação.
 
 \subsection{Risco de infraestrutura mapeado e backend de armazenamento local como mitigação}
 
@@ -92,7 +108,7 @@ Como resposta direta a essa dependência, foi implementado um backend de armazen
 
 \subsection{Discussão do processo de depuração}
 
-Em nenhum dos três casos o erro dependia de dados de entrada incomuns: os três se manifestavam de forma determinística, a cada tentativa. Os dois primeiros só se tornaram visíveis quando o fluxo correspondente foi exercitado de ponta a ponta (subida completa do painel; preenchimento e envio real do formulário de cliente), e não por inspeção isolada de código ou por testes unitários; o terceiro foi identificado por revisão do roteiro de infraestrutura, antes de qualquer tentativa de implantação em nuvem. Esse resultado reforça a importância de validar não apenas unidades de código isoladamente, mas o comportamento integrado do sistema, incluindo a configuração de infraestrutura subjacente (permissões de nuvem, variáveis de ambiente, escopos de autenticação de serviço) -- ponto retomado na discussão do Capítulo~\ref{cap5Discussao}.
+Em nenhum dos três casos o erro dependia de dados de entrada incomuns: os três se manifestavam de forma determinística, a cada tentativa. Os dois primeiros só se tornaram visíveis quando o fluxo correspondente foi exercitado de ponta a ponta (subida completa do painel; preenchimento e envio real do formulário de cliente), e não por inspeção isolada de código ou por testes unitários; o terceiro foi identificado por revisão do roteiro de infraestrutura, antes de qualquer tentativa de implantação em nuvem. Esse resultado reforça a importância de validar não apenas unidades de código isoladamente, mas o comportamento integrado do sistema, incluindo a configuração de infraestrutura subjacente (permissões de nuvem, variáveis de ambiente, escopos de autenticação de serviço) -- ponto retomado na discussão do Capítulo~\ref{cap5Discussao}. Dos três casos, dois foram corrigidos diretamente nesta etapa do trabalho -- o cadastro de cliente (Seção~4.6.2) e a dependência de credenciais de nuvem para o \textit{upload} de mídias, substituída por um backend de armazenamento local (Seção~4.6.3); o terceiro, o risco de permissões de IAM para a assinatura de URLs no Google Cloud Storage, permanece documentado como pré-requisito para quando a operação em nuvem for retomada, por não ser aplicável ao ambiente local adotado nesta fase.
 
 \section{Desempenho da Aplicação}
 
@@ -138,9 +154,14 @@ Esta seção sintetiza, em formato de checklist, os cenários exercitados durant
   \item[\textbf{[OK]}] Módulo de ideário: listagem, criação, edição e exclusão de itens (administrador) e envio de sugestão (usuário autenticado);
   \item[\textbf{[OK]}] Fluxo de \textit{upload} assinado (\texttt{sign} $\rightarrow$ \texttt{PUT} direto ao backend de armazenamento $\rightarrow$ leitura via URL), validado contra o backend local;
   \item[\textbf{[OK]}] \textit{Pipeline} de CI/CD: \textit{build} e publicação no GHCR disparados por \textit{push} real; sincronização de configuração, \textit{deploy} e \textit{health check} implementados e validados em ambiente local (Seção~\ref{sec:workflow-deploy});
-  \item[\textbf{[BUG IDENTIFICADO]}] Cadastro de cliente via formulário do painel -- falha por ausência dos campos \texttt{document\_type} e \texttt{tenant\_id} no corpo da requisição (Seção~4.6);
+  \item[\textbf{[CORRIGIDO]}] Cadastro de cliente via formulário do painel -- falha original por ausência dos campos \texttt{document\_type} e \texttt{tenant\_id} no corpo da requisição, corrigida por validação explícita do tipo de documento no \textit{frontend} e anexação automática do \texttt{tenant\_id} (Seção~4.6.2);
   \item[\textbf{[OK]}] Suíte automatizada do \textit{backend} (\texttt{go test ./...}) aprovada integralmente após as correções de qualidade de código;
   \item[\textbf{[OK]}] Teste de carga (k6) contra os \textit{endpoints} de listagem, sem falhas em quase três mil requisições;
   \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Bateria formal de testes de acessibilidade (leitores de tela, navegação por teclado, contraste);
   \item[\textbf{[NÃO REALIZADO NESTA ETAPA]}] Implantação e teste de carga contra uma instância de nuvem real -- a arquitetura está projetada e versionada (Seção~\ref{sec:workflow-deploy}), mas não foi exercitada contra um alvo público nesta fase acadêmica.
 \end{itemize}
+
+
+\subsection*{Considerações Finais do Capítulo}
+
+Este capítulo apresentou os resultados obtidos na validação do Onmarmoraria: testes funcionais dos módulos de negócio, testes de responsividade em dispositivos reais, três incidentes documentados com suas causas-raiz, métricas de desempenho sob carga, indicadores de qualidade de código e a verificação da etapa de integração contínua. O Capítulo~\ref{cap5Discussao} discute esses resultados frente aos objetivos definidos na Introdução, situando também as limitações identificadas e as melhorias futuras propostas.

@@ -1,4 +1,5 @@
 \chapter{FUNDAMENTAÇÃO TEÓRICA}
+\label{cap2FundamentosTecnicos}
 
 Considerando o caráter prático deste trabalho, a fundamentação teórica foi construída a partir de uma abordagem multidisciplinar, reunindo conceitos relacionados aos sistemas de informação, à transformação digital, à automação de processos e à arquitetura de software para aplicações web. Esses temas fornecem a base conceitual necessária para o desenvolvimento de um Sistema Integrado de Gestão (ERP) direcionado às marmorarias, um setor que ainda apresenta forte dependência de processos manuais, controles descentralizados e baixo nível de digitalização.
 
@@ -17,6 +18,36 @@ Com o avanço das Tecnologias da Informação e Comunicação (TICs), as empresa
 Nesse cenário, um ERP especializado surge como resposta à necessidade de integrar processos, otimizar rotinas diárias e estruturar operações que antes dependiam de controles informais. A digitalização permite maior rastreabilidade, melhora a eficiência e reduz gargalos, além de criar um ecossistema onde colaboradores, gestores e clientes se beneficiam de informações claras e acessíveis.
 
 A fundamentação teórica considera, portanto, que a adoção de plataformas digitais intuitivas, funcionais e alinhadas ao comportamento moderno dos usuários é essencial para que marmorarias alcancem níveis mais altos de produtividade. À medida que cresce a demanda por entregas rápidas e comunicação eficiente, torna-se indispensável que essas empresas acompanhem o ritmo da transformação digital global, incorporando sistemas que fortaleçam sua organização e crescimento sustentável.
+
+A Tabela~\ref{tab:gestao-tradicional-vs-onmarmoraria} resume, por processo operacional, a lacuna entre o modelo de gestão tradicional observado no setor e a resposta oferecida pelo Onmarmoraria.
+
+\begin{table}[H]
+  \centering
+  \caption{Gestão tradicional versus Onmarmoraria, por processo operacional.}
+  \label{tab:gestao-tradicional-vs-onmarmoraria}
+  \begin{tabular}{p{3.2cm}p{5.4cm}p{5.4cm}}
+    \hline
+    \textbf{Processo} & \textbf{Gestão tradicional (planilhas/papel)} & \textbf{Onmarmoraria} \\
+    \hline
+    Cadastro de clientes & Anotações dispersas, sem padronização de documento (CPF/CNPJ) & Cadastro único por \textit{tenant}, com validação de documento e histórico centralizado \\
+    Orçamentos & Cálculo manual por planilha, sem rastreio de status & Itens estruturados, status comercial e de obra, histórico auditável \\
+    Comunicação obra/vendas/produção & Informal (mensagens avulsas, telefone) & Dados centralizados e visíveis a todos os papéis autorizados no mesmo \textit{tenant} \\
+    Controle de acesso & Inexistente ou compartilhado & Autenticação JWT, papéis e permissões por usuário \\
+    Indicadores de gestão & Apuração manual, sujeita a atraso & \textit{Dashboard} com indicadores calculados a partir dos dados vivos do sistema \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026, com base na observação do fluxo operacional descrito na Seção~\ref{sec:levantamento-requisitos}.}
+  \end{minipage}
+\end{table}
+
+\section{Levantamento de Requisitos e Design Centrado no Usuário}
+\label{sec:levantamento-requisitos}
+
+A definição das funcionalidades do Onmarmoraria não partiu de um catálogo genérico de recursos de ERP, mas do mapeamento dos processos efetivamente executados por uma marmoraria de pequeno porte: cadastro de clientes, elaboração de orçamentos, acompanhamento de status comercial e de obra, e gestão do catálogo de produtos. Esse levantamento seguiu, ainda que de forma simplificada, o ciclo de \textit{design} centrado no usuário descrito pela norma ISO~9241-210 \cite{iso9241210}: compreensão do contexto de uso (entrevistas informais e observação do fluxo de trabalho de uma marmoraria de referência), especificação dos requisitos funcionais prioritários (delimitados no MVP descrito no Capítulo~\ref{cap3MatMet}), produção de soluções de \textit{design} (telas e fluxos do painel) e avaliação frente aos requisitos (testes manuais em desktop e dispositivos móveis, Capítulo~\ref{cap4Resultados}).
+
+Esse processo é o que a literatura de \textit{design} participativo descreve como incorporar a perspectiva de quem efetivamente opera o processo -- e não apenas a de quem o especifica -- nas decisões de \textit{design}: os campos do formulário de orçamento, por exemplo, refletem os dados que uma marmoraria já registra informalmente (cliente, itens, valores, status de obra), e não um modelo de dados genérico importado de outro domínio. Essa aproximação com a realidade operacional do setor, já discutida na Introdução e na Seção~\ref{sec:testes-e-validacao-cap3} do Capítulo~\ref{cap3MatMet}, é o que orienta a proposta de validação com usuários reais registrada como trabalho futuro no Capítulo~\ref{cap5Discussao}.
 
 \section{Sistemas Integrados de Gestão (ERP)}
 Os Sistemas Integrados de Gestão (Enterprise Resource Planning – ERP) surgiram como uma solução tecnológica capaz de unificar informações, automatizar processos e centralizar operações antes distribuídas em diferentes setores de uma empresa. De acordo com a literatura, sistemas ERP desempenham papel essencial na padronização de rotinas, aumento da rastreabilidade operacional e suporte à tomada de decisão baseada em dados, promovendo maior eficiência e controle organizacional.
@@ -38,3 +69,8 @@ A construção de um sistema de gestão exige mais do que funcionalidades operac
 Um aspecto central é a segurança, especialmente em sistemas que lidam com dados sensíveis de clientes, pedidos e informações comerciais. A implementação de autenticação baseada em tokens JWT, por exemplo, permite controlar acessos de forma estruturada, garantindo que apenas usuários autorizados possam manipular dados internos do sistema. Esse mecanismo, aliado ao uso de protocolos seguros (HTTPS), gerenciamento adequado de permissões e armazenamento protegido, contribui para a integridade e a confidencialidade das informações.
 
 Além disso, a adoção de boas práticas como monitoramento ativo, logs padronizados, versionamento semântico e ambientes separados para desenvolvimento, homologação e produção fortalece o ciclo de vida do software. Em conjunto, esses elementos garantem que o ERP seja não apenas funcional, mas também robusto, escalável e preparado para evoluções futuras, alinhando o projeto às exigências do desenvolvimento moderno.
+
+
+\subsection*{Considerações Finais do Capítulo}
+
+Este capítulo consolidou os referenciais teóricos que sustentam o Onmarmoraria: a lacuna entre a gestão tradicional e a transformação digital no setor de marmorarias (Tabela~\ref{tab:gestao-tradicional-vs-onmarmoraria}), o processo de levantamento de requisitos centrado no usuário que orientou o escopo do MVP, o papel dos sistemas ERP verticais, a infraestrutura de nuvem e conteinerização adotada, e as boas práticas de segurança e engenharia de software aplicadas ao projeto. O Capítulo~\ref{cap3MatMet} descreve, a partir desses fundamentos, os materiais, as tecnologias e as etapas efetivamente empregadas no desenvolvimento do sistema.
