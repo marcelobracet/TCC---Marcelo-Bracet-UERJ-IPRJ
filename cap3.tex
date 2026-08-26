@@ -3,7 +3,7 @@ Neste capítulo, são apresentadas as tecnologias utilizadas, as ferramentas ado
 
 O desenvolvimento do sistema foi fundamentado em práticas contemporâneas de engenharia de software, com ênfase em modularidade, escalabilidade, desempenho, reuso de componentes e segurança da informação. Para isso, foram selecionadas tecnologias amplamente consolidadas no mercado e compatíveis com uma arquitetura flexível, preparada para evoluções futuras. Além disso, buscou-se garantir uma experiência fluida e intuitiva para os usuários, considerando princípios de usabilidade, padronização de fluxos e redução de fricções no uso diário da aplicação.
 
-A escolha por computação em nuvem e conteinerização teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A arquitetura foi desenhada para que a API e o PostgreSQL executem em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine) ou em um VPS equivalente --- com manifestos de Kubernetes já preparados no repositório para cenários de maior escala (Apêndice~\ref{apendiceWorkflow}) ---, o frontend seja publicado na Vercel, as mídias fiquem no Google Cloud Storage (GCS) e as imagens Docker da API sejam versionadas no GHCR. Por se tratar de um MVP acadêmico, e com o objetivo de manter o material documentado neste trabalho sempre acessível e sob controle de custo, a validação prática do sistema foi conduzida em ambiente Docker local, reproduzindo os mesmos contêineres e a mesma configuração previstos para essa camada de infraestrutura em nuvem. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável.
+A escolha por computação em nuvem e conteinerização teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A arquitetura foi desenhada para que a API e o PostgreSQL executem em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine) ou em um VPS equivalente --- com manifestos de Kubernetes já preparados no repositório para cenários de maior escala (Seção~\ref{sec:workflow-deploy}) ---, o frontend seja publicado na Vercel, as mídias sejam armazenadas por um backend próprio (local por padrão, com o mesmo contrato de URLs assinadas podendo apontar para o Google Cloud Storage ou para um serviço \textit{S3-compatible} como o Cloudflare R2) e as imagens Docker da API sejam versionadas no GHCR. Por se tratar de um MVP acadêmico, e com o objetivo de manter o material documentado neste trabalho sempre acessível e sob controle de custo, a validação prática do sistema foi conduzida em ambiente Docker local, reproduzindo os mesmos contêineres e a mesma configuração previstos para essa camada de infraestrutura em nuvem. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável.
 
 Este capítulo também apresenta os princípios que guiaram a modelagem dos processos internos, a definição dos fluxos de informação, as estratégias de persistência de dados e os mecanismos de autenticação utilizados. O intuito é fornecer uma visão detalhada do percurso técnico do projeto, desde as primeiras decisões de arquitetura até as etapas finais de entrega e testes do sistema.
 
@@ -15,7 +15,7 @@ O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e am
 \item \textbf{Frontend:} Next.js (App Router), React, TypeScript e Tailwind CSS, com comunicação HTTP via Axios e tipagem estática para reduzir erros em tempo de desenvolvimento.
 \item \textbf{Backend:} linguagem Go, \textit{framework} Gin para HTTP e GORM como ORM para persistência no PostgreSQL. Autenticação com JWT (\textit{access token} e \textit{refresh token}) e senhas com bcrypt.
 \item \textbf{Banco de Dados:} PostgreSQL 15, escolhido por robustez, propriedades ACID e adequação a dados relacionais de clientes, produtos e orçamentos.
-\item \textbf{Infraestrutura e Deploy:} Docker e Docker Compose para execução local da API e do banco, reproduzindo a topologia prevista para produção; arquitetura preparada para Google Cloud Compute Engine ou VPS (VM) e para orquestração via Kubernetes (manifestos versionados no repositório); Vercel para o frontend; GHCR para imagens Docker da API; GCS para mídias (logo, avatar e produtos) via URLs assinadas; CI/CD com GitHub Actions (build e publicação de imagem).
+\item \textbf{Infraestrutura e Deploy:} Docker e Docker Compose para execução local da API e do banco, reproduzindo a topologia prevista para produção; arquitetura preparada para Google Cloud Compute Engine ou VPS (VM) e para orquestração via Kubernetes (manifestos versionados no repositório); Vercel para o frontend; GHCR para imagens Docker da API; armazenamento de mídias (logo, avatar e produtos) via URLs assinadas, com backend local por padrão e suporte pronto para Google Cloud Storage ou um serviço \textit{S3-compatible} (Cloudflare R2); CI/CD com GitHub Actions (build e publicação de imagem).
 \item \textbf{Ferramentas complementares:} Docker, GitHub, Postman (validação de rotas) e a landing page institucional (Next.js) para marketing e captura de leads.
 \end{itemize}
 
@@ -47,15 +47,15 @@ Foram implementados \textit{endpoints} sob o prefixo \texttt{/api/v1} para:
   \item \textit{Provision} de empresa e administrador, \textit{login}, renovação de token e verificação de e-mail;
   \item Cadastro e gestão de usuários, clientes, produtos e orçamentos;
   \item Configurações da empresa (dados cadastrais e logo);
-  \item \textit{Upload} de arquivos (logo, avatar e imagens de produto) via URLs assinadas no GCS;
+  \item \textit{Upload} de arquivos (logo, avatar e imagens de produto) via URLs assinadas, emitidas pelo próprio backend de armazenamento (local por padrão);
   \item Consulta de auditoria e exportação básica de relatórios de produtos;
   \item Cadastro público na lista de espera (landing page), persistido no PostgreSQL;
   \item \textit{Healthchecks} (\texttt{/health}, \texttt{/liveness}, \texttt{/readiness}) para monitoramento do ambiente de execução, local ou em nuvem.
 \end{itemize}
 
-O armazenamento de mídias foi delegado ao Google Cloud Storage (GCS), por meio da biblioteca oficial \texttt{cloud.google.com/go/storage}. Em vez de receber o arquivo no servidor da API, o \textit{backend} emite URLs assinadas (\textit{signed URLs}) de escrita e leitura. O \textit{frontend} envia o arquivo diretamente ao \textit{bucket} (privado) e, para exibição, solicita uma URL assinada de leitura. Essa estratégia reduz a carga sobre a API, evita expor o \textit{bucket} publicamente e permite controlar o acesso por tempo limitado.
+O armazenamento de mídias foi implementado por trás de uma interface (\texttt{Signer}) com duas implementações intercambiáveis: um backend em disco local, selecionado por padrão, e um backend para o Google Cloud Storage (GCS), habilitado automaticamente quando a variável \texttt{GCS\_BUCKET} é configurada. Ambos seguem o mesmo contrato de \textit{signed URLs} de escrita e leitura, de modo que o restante da aplicação -- e o próprio \textit{frontend} -- não precisa saber qual backend está ativo. O backend local foi adotado como padrão deste trabalho por eliminar a dependência de uma conta de nuvem ativa e qualquer custo operacional durante a avaliação acadêmica, sem abrir mão do mesmo modelo de segurança: o \textit{token} de \textit{upload} é assinado com HMAC-SHA256 e expira em poucos minutos, e o arquivo nunca trafega pelo processo da API além da escrita em disco. Optou-se por manter o próprio GCS como o backend de nuvem já implementado (em vez de substituí-lo por outro serviço) porque o contrato de \textit{signed URLs} já validado neste trabalho é o mesmo adotado por serviços \textit{S3-compatible} de baixo custo, como o Cloudflare R2, tornando essa também uma alternativa viável de baixo custo caso a operação em nuvem seja retomada.
 
-Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o cliente autenticado solicita uma URL de \textit{upload} ao \textit{endpoint} \texttt{/uploads/sign}; a API gera a chave do objeto no \textit{bucket} e devolve a URL assinada de PUT; o \textit{frontend} realiza o envio direto ao GCS; posteriormente, a aplicação persiste apenas a referência (\texttt{object\_key}) e solicita URLs de leitura quando necessário. Com essa abordagem, a arquitetura torna-se mais leve, segura e escalável no tratamento de conteúdos multimídia.
+Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o cliente autenticado solicita uma URL de \textit{upload} ao \textit{endpoint} \texttt{/uploads/sign}; a API gera a chave do objeto e devolve uma URL assinada de PUT apontando para o backend ativo; o \textit{frontend} realiza o envio direto a essa URL (ao próprio servidor da API, no backend local, ou ao \textit{bucket}, no backend de nuvem); posteriormente, a aplicação persiste apenas a referência (\texttt{object\_key}) e solicita URLs de leitura quando necessário. Com essa abordagem, a arquitetura permanece leve, segura e escalável no tratamento de conteúdos multimídia, independentemente do backend de armazenamento selecionado.
  
 \begin{figure}[H]
   \centering
@@ -103,14 +103,14 @@ A Figura~\ref{fig:fluxo-cliente-servidor} ilustra o fluxo de comunicação entre
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao Google Cloud Storage (GCS) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL assinada de leitura. Essa estratégia mantém o \textit{bucket} privado, reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário.
+No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao backend de armazenamento ativo (local por padrão, ou ao \textit{bucket} de nuvem quando configurado) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL de leitura. Essa estratégia reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário, sem que o \textit{frontend} precise conhecer qual backend está ativo.
 
 \subsection{Testes e Validação}
 \label{sec:testes-e-validacao-cap3}
 
 Durante o desenvolvimento, a validação do sistema combinou testes manuais da interface web e testes automatizados no \textit{backend}, com foco em regras de negócio, autenticação e consistência das respostas da API.
 
-No \textit{frontend}, foram realizados testes manuais em navegadores desktop e em dispositivos móveis (iPhone e Android), avaliando a responsividade do painel, o fluxo de autenticação (\textit{login}, renovação de sessão e redirecionamento para rotas protegidas), a navegação entre os módulos (clientes, produtos, orçamentos e configurações) e a consistência dos dados exibidos após as operações de criação e edição. Também foram verificados cenários de \textit{upload} de imagens (logo e produtos), incluindo a obtenção de URLs assinadas e a exibição correta dos arquivos armazenados no Google Cloud Storage.
+No \textit{frontend}, foram realizados testes manuais em navegadores desktop e em dispositivos móveis (iPhone e Android), avaliando a responsividade do painel, o fluxo de autenticação (\textit{login}, renovação de sessão e redirecionamento para rotas protegidas), a navegação entre os módulos (clientes, produtos, orçamentos e configurações) e a consistência dos dados exibidos após as operações de criação e edição. Também foram verificados cenários de \textit{upload} de imagens (logo e produtos), incluindo a obtenção de URLs assinadas e a exibição correta dos arquivos gravados pelo backend de armazenamento local.
 
 No \textit{backend}, a validação automatizada foi implementada com o pacote padrão \texttt{testing} da linguagem Go, executada por meio do comando \texttt{go test ./...}. Para isolar as regras de negócio das dependências de infraestrutura, foram utilizados \textit{mocks} manuais de repositórios (implementações em memória das interfaces de domínio), localizados no pacote \texttt{internal/mocks}. Essa abordagem permite simular o comportamento de persistência sem a necessidade de banco de dados real durante os testes unitários. Dentre os cenários cobertos pelos testes automatizados, destacam-se:
 \begin{itemize}
@@ -143,6 +143,32 @@ A primeira tela da aplicação apresenta o formulário de \textit{login}, guiand
   \caption{Tela inicial com opções de Login e Criar Conta (versão anterior à revisão de escopo descrita no Capítulo~\ref{cap5Discussao}).}
   \includegraphics[width=0.85\textwidth]{figures/login-page.png}
   \label{fig:login-page}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+Na versão atual do sistema, a tela de login foi simplificada, sem o atalho de autoatendimento discutido acima, conforme ilustrado na Figura~\ref{fig:login-atual} (desktop) e na Figura~\ref{fig:login-mobile} (dispositivo móvel), essa última também evidenciando a responsividade do formulário de autenticação.
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.85\textwidth]{figures/login-atual.png}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: tela de login atual (desktop), sem o atalho de criação de conta]}}
+  \caption{Tela de login na versão atual do sistema (desktop).}
+  \label{fig:login-atual}
+\end{figure}
+{\centering\small Fonte: O Autor, 2026.\par}
+\vspace{0.8em}
+
+\begin{figure}[H]
+  \centering
+  \captionsetup{justification=centering}
+  % TODO(Marcelo): substituir o \fbox abaixo por
+  % \includegraphics[width=0.5\textwidth]{figures/login-mobile.png}
+  \fbox{\parbox[c][6cm][c]{0.5\textwidth}{\centering\itshape [Espaço reservado -- print: tela de login aberta no iPhone/Android]}}
+  \caption{Tela de login renderizada em viewport de \textit{smartphone}.}
+  \label{fig:login-mobile}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
@@ -204,7 +230,7 @@ O módulo de clientes permite listar, criar, editar e excluir registros vinculad
 
 \subsection{Produtos e Orçamentos}
 
-O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com imagem armazenada no GCS. O módulo de orçamentos permite criar e editar propostas vinculadas a clientes e itens, com atualização de status comercial e de obra, além de visualização/impressão. Esses fluxos constituem o núcleo operacional do MVP entregue neste trabalho.
+O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com imagem armazenada pelo backend de armazenamento de mídias. O módulo de orçamentos permite criar e editar propostas vinculadas a clientes e itens, com atualização de status comercial e de obra, além de visualização/impressão. Esses fluxos constituem o núcleo operacional do MVP entregue neste trabalho.
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
@@ -232,7 +258,7 @@ O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com
 
 \subsection{Configurações e Perfil}
 
-Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado no GCS) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
+Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado pelo backend de armazenamento) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
 
 \subsection{Responsividade em Dispositivos Móveis}
 
@@ -266,9 +292,9 @@ Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o 
 
 Para complementar as funcionalidades principais, o Onmarmoraria utiliza serviços externos de armazenamento e, opcionalmente, de pagamento.
 
-\subsection{GCS para Armazenamento de Imagens}
+\subsection{Armazenamento de Imagens: Backend Local e GCS/R2 Opcionais}
 
-O Google Cloud Storage foi integrado para armazenar logo da empresa, avatar de usuários e imagens de produtos. A API não recebe o arquivo binário: ela assina URLs de PUT/GET (esquema V4) e o navegador envia/baixa o objeto diretamente. O \textit{bucket} permanece privado; apenas a referência (\texttt{object\_key}) é persistida no banco. Sem as variáveis \texttt{GCS\_BUCKET} e credenciais da conta de serviço, o \textit{endpoint} de assinatura responde HTTP 503, e o painel pode operar com URL manual em configurações.
+O armazenamento de logo da empresa, avatar de usuários e imagens de produtos é resolvido, por padrão, por um backend próprio em disco local (\texttt{internal/infra/storage/local}): a API assina um \textit{token} de \textit{upload} com expiração curta (HMAC-SHA256) e o navegador envia o arquivo diretamente ao próprio servidor da API, que grava em disco e serve o arquivo de volta por uma rota estática. Quando a variável \texttt{GCS\_BUCKET} é preenchida, o mesmo \textit{endpoint} de assinatura passa a emitir URLs de PUT/GET (esquema V4) contra um \textit{bucket} privado do Google Cloud Storage, sem qualquer alteração no \textit{frontend}. Em ambos os casos, apenas a referência (\texttt{object\_key}) é persistida no banco. Essa mesma interface de assinatura de URLs é compatível com serviços \textit{S3-compatible} de baixo custo, como o Cloudflare R2, caso essa opção venha a ser adotada no lugar do GCS.
 
 \subsection{Landing page e lista de espera}
 
@@ -288,4 +314,28 @@ A seção de planos na landing descreve uma diferenciação futura por porte da 
 
 \subsection{GHCR e GitHub Actions (entrega contínua)}
 
-O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem e a publica no GHCR; a etapa de \textit{deploy} em uma VM ou VPS está implementada e versionada no pipeline (Apêndice~\ref{apendiceWorkflow}), mas permanece preparada para quando a operação em nuvem for retomada, não sendo executada de forma contínua nesta fase de validação acadêmica (Capítulo~\ref{cap5Discussao}). Essa integração não se confunde com o armazenamento de mídias do usuário, projetado para o GCS.
+O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem e a publica no GHCR; a etapa de \textit{deploy} em uma VM ou VPS está implementada e versionada no pipeline (Seção~\ref{sec:workflow-deploy}), mas permanece preparada para quando a operação em nuvem for retomada, não sendo executada de forma contínua nesta fase de validação acadêmica (Capítulo~\ref{cap5Discussao}). Essa integração não se confunde com o armazenamento de mídias do usuário, resolvido pelo backend local descrito na Seção~\ref{sec:testes-e-validacao-cap3} e nesta seção.
+
+O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/workflows/deploy.yml}), prevista para ser executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha; conforme discutido no Capítulo~\ref{cap5Discussao}, essa etapa está implementada e foi validada em ambiente local, mas não foi exercitada de forma contínua contra uma instância de nuvem pública nesta fase acadêmica.
+\label{sec:workflow-deploy}
+
+\begin{verbatim}
+export GHCR_OWNER='<owner>'
+export IMAGE_TAG='<sha-do-commit>'
+PREVIOUS_TAG="$(cat .deployed_tag 2>/dev/null || echo latest)"
+
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# health check com nova tentativa, seguido de rollback automático
+# para PREVIOUS_TAG caso o endpoint /health nao responda com sucesso
+if ! curl -fsSk -H "Host: api.exemplo.com.br" \\
+     https://localhost/health; then
+  export IMAGE_TAG="$PREVIOUS_TAG"
+  docker compose -f docker-compose.prod.yml up -d
+  exit 1
+fi
+
+echo "$IMAGE_TAG" > .deployed_tag
+\end{verbatim}
+
