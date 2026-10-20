@@ -7,7 +7,7 @@
 
 Este trabalho apresentou o desenvolvimento do Onmarmoraria, um ERP web multi-\textit{tenant} voltado à digitalização de processos em marmorarias. Foram integrados conhecimentos de engenharia de software, APIs REST, autenticação JWT, computação em nuvem e entrega contínua, resultando em uma solução funcional alinhada às necessidades de cadastro de clientes, catálogo de produtos e gestão de orçamentos.
 
-A arquitetura adotada --- monólito modular em Go, frontend Next.js, PostgreSQL, Docker, GHCR e GitHub Actions, com caminho projetado para Compute Engine ou VPS, orquestração via Kubernetes, e um backend de armazenamento de mídias local (com suporte pronto para GCS ou um serviço \textit{S3-compatible} como o Cloudflare R2) --- privilegiou reprodutibilidade, segurança (URLs assinadas de curta duração) e baixo custo operacional, viabilizando uma eventual subida em produção sem depender de serviços caros nem de uma conta de nuvem ativa durante a avaliação acadêmica. A validação deste trabalho, contudo, foi conduzida em ambiente local: os testes automatizados do backend, a suíte de carga local (k6) e as validações manuais do painel -- em desktop e em dispositivos móveis reais -- indicam estabilidade dos fluxos críticos para demonstração acadêmica e uso inicial por pequenas marmorarias.
+A arquitetura adotada (monólito modular em Go, \textit{frontend} Next.js, PostgreSQL, Docker, GHCR e GitHub Actions, com caminho projetado para Compute Engine ou VPS, orquestração via Kubernetes, e um \textit{backend} de armazenamento de mídias local, com suporte pronto para o GCS ou para um serviço compatível com o Amazon S3, como o Cloudflare R2) privilegiou reprodutibilidade, segurança (URLs assinadas de curta duração) e baixo custo operacional, viabilizando uma eventual subida em produção sem depender de serviços caros nem de uma conta de nuvem ativa durante a avaliação acadêmica. A validação deste trabalho, contudo, foi conduzida em ambiente local: os testes automatizados do \textit{backend}, a suíte de carga local (k6) e as validações manuais do painel, em computadores e em dispositivos móveis reais, indicam estabilidade dos fluxos críticos para demonstração acadêmica e uso inicial por pequenas marmorarias.
 
 Para além do aspecto técnico, o projeto contribui ao oferecer uma base concreta de digitalização para um setor que ainda opera, em muitos casos, com planilhas e controles fragmentados. O Onmarmoraria não pretende esgotar todas as particularidades do chão de fábrica, mas entregar um núcleo operacional útil e expansível.
 
@@ -18,10 +18,11 @@ A conclusão deste projeto não representa um ponto final, e sim a consolidaçã
   \item Módulo de estoque de chapas e retalhos, com rastreabilidade de matéria-prima;
   \item Diferenciação por planos (limites de usuários e recursos conforme o porte da marmoraria) e eventual integração com gateway de pagamento;
   \item Execução da implantação em um ambiente de nuvem real (VM/VPS ou Kubernetes), validando de ponta a ponta a arquitetura já projetada e versionada no repositório;
-  \item Ampliação de testes automatizados (incluindo E2E no frontend) e observabilidade quando a operação em nuvem for retomada;
+  \item Acesso de cada marmoraria por domínio próprio ou subdomínio do site do produto, com a marca da empresa já na tela de \textit{login};
+  \item Ampliação de testes automatizados (incluindo testes de ponta a ponta no \textit{frontend}) e observabilidade quando a operação em nuvem for retomada;
   \item Aprofundamento de relatórios gerenciais e exportações;
   \item Adequações à LGPD (políticas de retenção, consentimento e exclusão de dados);
-  \item Ampliação do funil da landing page (nutrição de leads e acompanhamento comercial) alinhado ao produto.
+  \item Ampliação do funil de vendas da página institucional (acompanhamento comercial dos interessados cadastrados na lista de espera), alinhado ao produto.
 \end{itemize}
 
 Conclui-se, portanto, que o Onmarmoraria constitui um protótipo funcional e escalável, com potencial de impacto real no cotidiano de marmorarias, desde que acompanhado de testes com usuários, continuidade de desenvolvimento e operação responsável na nuvem.
