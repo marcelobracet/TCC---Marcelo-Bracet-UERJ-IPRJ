@@ -642,8 +642,8 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \medskip
 \noindent\textbf{UC01: Autenticar-se (login)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
-\textbf{Descrição:} usuário informa e-mail e senha; o sistema valida as credenciais e emite \textit{tokens} de acesso.\\
-\textbf{Pré-condição:} usuário possui conta ativa em um \textit{tenant}.\\
+\textbf{Descrição:} Usuário informa e-mail e senha; o sistema valida as credenciais e emite tokens de acesso.\\
+\textbf{Pré-condição:} Usuário possui conta ativa em um \textit{tenant}.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário acessa a tela de \textit{login} e informa e-mail e senha.
@@ -653,14 +653,14 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item \textit{Frontend} persiste os \textit{tokens} e o \texttt{tenant\_id}.
   \item Sistema redireciona o usuário para o \textit{dashboard}.
 \end{enumerate}
-\textbf{Fluxo Alternativo (credenciais inválidas):} no passo 3, o sistema retorna erro genérico de credenciais inválidas, sem revelar se o e-mail está cadastrado.\\
+\textbf{Fluxo Alternativo -- Credenciais inválidas:} No passo 3, o sistema retorna erro genérico de credenciais inválidas, sem revelar se o e-mail está cadastrado.\\
 \textbf{Pós-condição:} usuário autenticado; requisições seguintes enviam \texttt{Authorization: Bearer <token>} (ver Figura~\ref{fig:sequencia-login}).
 
 \medskip
 \noindent\textbf{UC02: Provisionar nova empresa}\\
 \textbf{Ator:} Visitante.\\
-\textbf{Descrição:} cria uma nova empresa (\textit{tenant}) e o respectivo usuário administrador em uma única operação, por meio do \textit{endpoint} público \texttt{/\allowbreak{}auth/\allowbreak{}provision}.\\
-\textbf{Pré-condição:} nenhuma (\textit{endpoint} público).\\
+\textbf{Descrição:} Cria uma nova empresa (\textit{tenant}) e o respectivo usuário administrador em uma única operação, por meio do \textit{endpoint} público \texttt{/auth/provision}.\\
+\textbf{Pré-condição:} Nenhuma (\textit{endpoint} público).\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário preenche dados da empresa (razão social, CNPJ) e do administrador (nome, e-mail, senha).
@@ -668,13 +668,13 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item Sistema cria o usuário administrador vinculado ao \textit{tenant}.
   \item Sistema retorna \textit{tokens} de autenticação, autenticando automaticamente o administrador recém-criado.
 \end{enumerate}
-\textbf{Pós-condição:} novo \textit{tenant} ativo e administrador autenticado, pronto para uso do sistema.
+\textbf{Pós-condição:} Novo \textit{tenant} ativo e administrador autenticado, pronto para uso do sistema.
 
 \medskip
 \noindent\textbf{UC03: Gerenciar clientes}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
-\textbf{Descrição:} cadastro, edição, listagem e exclusão lógica de clientes pessoa física ou jurídica.\\
-\textbf{Pré-condição:} usuário autenticado com permissão sobre o módulo de clientes.\\
+\textbf{Descrição:} Cadastro, edição, listagem e exclusão lógica de clientes pessoa física ou jurídica.\\
+\textbf{Pré-condição:} Usuário autenticado com permissão sobre o módulo de clientes.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário acessa a listagem de clientes do \textit{tenant}.
@@ -688,22 +688,22 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \medskip
 \noindent\textbf{UC04: Gerenciar produtos}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
-\textbf{Descrição:} cadastro, edição, listagem e exclusão do catálogo de produtos e serviços da marmoraria.\\
+\textbf{Descrição:} Cadastro, edição, listagem e exclusão do catálogo de produtos e serviços da marmoraria.\\
 \textbf{Pré-condição:} usuário autenticado com permissão sobre o módulo de produtos.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário acessa a listagem de produtos.
   \item Usuário cadastra ou edita um produto (nome, preço, categoria, SKU, estoque).
-  \item Usuário pode enviar uma imagem do produto (\textit{\guillemotleft include\guillemotright} UC06).
+  \item Usuário pode enviar uma imagem do produto.
   \item Sistema persiste o produto.
 \end{enumerate}
-\textbf{Pós-condição:} produto disponível para composição de orçamentos (UC05).
+\textbf{Pós-condição:} Produto disponível para composição de orçamentos (UC05).
 
 \medskip
 \noindent\textbf{UC05: Gerenciar orçamentos}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
-\textbf{Descrição:} criação e acompanhamento de orçamentos, vinculando cliente e itens (produto, medidas, quantidade), com cálculo automático de valores e acompanhamento do status comercial e da execução da obra.\\
-\textbf{Pré-condição:} usuário autenticado; cliente e produtos previamente cadastrados.\\
+\textbf{Descrição:} Criação e acompanhamento de orçamentos, vinculando cliente e itens (produto, medidas, quantidade), com cálculo automático de valores e acompanhamento do status comercial e da execução da obra.\\
+\textbf{Pré-condição:} Usuário autenticado; cliente e produtos previamente cadastrados.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário seleciona um cliente e adiciona itens ao orçamento (produto, medidas, quantidade).
@@ -717,8 +717,8 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \medskip
 \noindent\textbf{UC06: Enviar imagem (logo/avatar/produto)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
-\textbf{Descrição:} envio de imagens ao sistema (logo da empresa, avatar do usuário ou fotos de produto) por meio de URL assinada.\\
-\textbf{Pré-condição:} usuário autenticado.\\
+\textbf{Descrição:} Envio de imagens ao sistema (logo da empresa, avatar do usuário ou fotos de produto) por meio de URL assinada.\\
+\textbf{Pré-condição:} Usuário autenticado.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário seleciona uma imagem.
@@ -727,13 +727,13 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item Sistema valida o \textit{token} e grava o arquivo (ver Figura~\ref{fig:sequencia-upload}).
   \item Sistema associa a referência da imagem (\texttt{object\_key}) à entidade correspondente.
 \end{enumerate}
-\textbf{Pós-condição:} imagem disponível para exibição por meio de URL de leitura.
+\textbf{Pós-condição:} Imagem disponível para exibição por meio de URL de leitura.
 
 \medskip
 \noindent\textbf{UC07: Configurar empresa}\\
 \textbf{Ator:} Administrador.\\
-\textbf{Descrição:} edição de dados e preferências da empresa, incluindo o logo institucional.\\
-\textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
+\textbf{Descrição:} Edição de dados e preferências da empresa, incluindo o logo institucional.\\
+\textbf{Pré-condição:} Usuário autenticado com papel \textit{admin}.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Administrador acessa a tela de configurações.
@@ -745,21 +745,21 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \medskip
 \noindent\textbf{UC08: Consultar indicadores (dashboard)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
-\textbf{Descrição:} visualização de painel com indicadores consolidados do negócio.\\
-\textbf{Pré-condição:} usuário autenticado.\\
+\textbf{Descrição:} Visualização de painel com indicadores consolidados do negócio.\\
+\textbf{Pré-condição:} Usuário autenticado.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Usuário acessa o \textit{dashboard}.
   \item Sistema consulta indicadores agregados do \textit{tenant} (orçamentos por status, clientes ativos, entre outros).
   \item Sistema exibe o painel com gráficos e métricas.
 \end{enumerate}
-\textbf{Pós-condição:} usuário informado sobre a situação atual do negócio.
+\textbf{Pós-condição:} Usuário informado sobre a situação atual do negócio.
 
 \medskip
 \noindent\textbf{UC09: Consultar auditoria}\\
 \textbf{Ator:} Administrador.\\
-\textbf{Descrição:} consulta ao log de auditoria das operações realizadas no sistema, com filtros por módulo, ação e usuário.\\
-\textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
+\textbf{Descrição:} Consulta ao log de auditoria das operações realizadas no sistema, com filtros por módulo, ação e usuário.\\
+\textbf{Pré-condição:} Usuário autenticado com papel \textit{admin}.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Administrador acessa a tela de auditoria.
