@@ -3,20 +3,57 @@ Neste capítulo, são apresentadas as tecnologias utilizadas, as ferramentas ado
 
 O desenvolvimento do sistema foi fundamentado em práticas contemporâneas de engenharia de software, com ênfase em modularidade, escalabilidade, desempenho, reuso de componentes e segurança da informação. Para isso, foram selecionadas tecnologias amplamente consolidadas no mercado e compatíveis com uma arquitetura flexível, preparada para evoluções futuras. Além disso, buscou-se garantir uma experiência fluida e intuitiva para os usuários, considerando princípios de usabilidade, padronização de fluxos e redução de fricções no uso diário da aplicação.
 
-A escolha por computação em nuvem e conteinerização teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A arquitetura foi desenhada para que a API e o PostgreSQL executem em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine) ou em um VPS equivalente --- com manifestos de Kubernetes já preparados no repositório para cenários de maior escala (Seção~\ref{sec:workflow-deploy}) ---, o frontend seja publicado na Vercel, as mídias sejam armazenadas por um backend próprio (local por padrão, com o mesmo contrato de URLs assinadas podendo apontar para o Google Cloud Storage ou para um serviço \textit{S3-compatible} como o Cloudflare R2) e as imagens Docker da API sejam versionadas no GHCR. Por se tratar de um MVP acadêmico, e com o objetivo de manter o material documentado neste trabalho sempre acessível e sob controle de custo, a validação prática do sistema foi conduzida em ambiente Docker local, reproduzindo os mesmos contêineres e a mesma configuração previstos para essa camada de infraestrutura em nuvem. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável.
+A escolha por computação em nuvem e por contêineres teve como objetivo reduzir a manutenção manual de servidores, padronizar ambientes e manter custos operacionais baixos. A arquitetura foi desenhada para que a API e o PostgreSQL executem em contêineres Docker em uma máquina virtual na Google Cloud (Compute Engine) ou em um VPS equivalente, com manifestos de Kubernetes já preparados no repositório para cenários de maior escala (Seção~\ref{sec:workflow-deploy}). O \textit{frontend} foi preparado para publicação na Vercel; as mídias são armazenadas por um \textit{backend} próprio (local por padrão, com o mesmo contrato de URLs assinadas podendo apontar para o \textit{Google Cloud Storage} ou para um serviço compatível com o Amazon S3, como o Cloudflare R2); e as imagens Docker da API são versionadas no GHCR. Por se tratar de um MVP acadêmico, e com o objetivo de manter o material documentado neste trabalho sempre acessível e sob controle de custo, a validação prática do sistema foi conduzida em ambiente Docker local, reproduzindo os mesmos contêineres e a mesma configuração previstos para essa camada de infraestrutura em nuvem. Esse conjunto de decisões permitiu concentrar esforços no desenvolvimento das funcionalidades principais do ERP, criando uma solução robusta, segura e economicamente viável.
 
 Este capítulo também apresenta os princípios que guiaram a modelagem dos processos internos, a definição dos fluxos de informação, as estratégias de persistência de dados e os mecanismos de autenticação utilizados. O intuito é fornecer uma visão detalhada do percurso técnico do projeto, desde as primeiras decisões de arquitetura até as etapas finais de entrega e testes do sistema.
 
 \section{Tecnologias Utilizadas}
-O desenvolvimento do ERP para marmorarias baseou-se em tecnologias modernas e amplamente reconhecidas no setor de software, buscando garantir uma experiência eficiente, segura e acessível para os usuários finais. A seleção das ferramentas considerou critérios como facilidade de implementação, agilidade, compatibilidade entre plataformas, escalabilidade e aderência às boas práticas do mercado. A seguir, são listadas as principais tecnologias utilizadas durante o desenvolvimento do projeto.
+\label{sec:tecnologias}
+A seleção das tecnologias considerou facilidade de implementação, compatibilidade entre plataformas, escalabilidade, custo e aderência às boas práticas do mercado. Esta seção apresenta cada tecnologia empregada no sistema entregue, o papel que ela cumpre e o motivo da escolha, organizadas pela camada da aplicação em que atuam.
+
+\subsection{\textit{Backend} (API)}
 
 \begin{itemize}
-\item \textbf{Cursor (IDE):} ambiente de desenvolvimento com assistência de Inteligência Artificial contextual, utilizado para acelerar a escrita de código, refatorações e manutenção da consistência arquitetural do projeto.
-\item \textbf{Frontend:} Next.js (App Router), React, TypeScript e Tailwind CSS, com comunicação HTTP via Axios e tipagem estática para reduzir erros em tempo de desenvolvimento.
-\item \textbf{Backend:} linguagem Go, \textit{framework} Gin para HTTP e GORM como ORM para persistência no PostgreSQL. Autenticação com JWT (\textit{access token} e \textit{refresh token}) e senhas com bcrypt.
-\item \textbf{Banco de Dados:} PostgreSQL 15, escolhido por robustez, propriedades ACID e adequação a dados relacionais de clientes, produtos e orçamentos.
-\item \textbf{Infraestrutura e Deploy:} Docker e Docker Compose para execução local da API e do banco, reproduzindo a topologia prevista para produção; arquitetura preparada para Google Cloud Compute Engine ou VPS (VM) e para orquestração via Kubernetes (manifestos versionados no repositório); Vercel para o frontend; GHCR para imagens Docker da API; armazenamento de mídias (logo, avatar e produtos) via URLs assinadas, com backend local por padrão e suporte pronto para Google Cloud Storage ou um serviço \textit{S3-compatible} (Cloudflare R2); CI/CD com GitHub Actions (build e publicação de imagem).
-\item \textbf{Ferramentas complementares:} Docker, GitHub, Postman (validação de rotas) e a landing page institucional (Next.js) para marketing e captura de leads.
+\item \textbf{Go:} linguagem de programação compilada e de tipagem estática, criada pelo Google. Gera um único executável, sem dependências externas, o que simplifica a criação de imagens Docker pequenas; oferece bom desempenho e suporte nativo à concorrência, adequado a um servidor que atende várias requisições ao mesmo tempo.
+\item \textbf{Gin:} \textit{framework} HTTP para Go. É responsável por receber as requisições, encaminhá-las à função correta de acordo com a rota (por exemplo, \texttt{GET /\allowbreak{}api/\allowbreak{}v1/\allowbreak{}clients}), validar automaticamente o formato dos dados recebidos e executar os \textit{middlewares} de autenticação e autorização antes de cada rota protegida.
+\item \textbf{GORM:} biblioteca de mapeamento objeto-relacional (ORM, conceito apresentado na Seção~\ref{cap1Revisao}) para Go. Cada entidade do sistema é uma \textit{struct} em Go, e o GORM gera os comandos SQL de criação de tabelas, inserção, consulta, atualização e exclusão a partir dessas \textit{structs}. Seu uso neste projeto é detalhado na Seção~\ref{sec:desenvolvimento-backend}.
+\item \textbf{JWT (\textit{JSON Web Token}):} padrão de \textit{token} assinado digitalmente que carrega, em formato JSON, a identidade do usuário. Após o \textit{login}, a API entrega ao navegador um \textit{token} de acesso, de curta duração, e um \textit{token} de renovação (\textit{refresh token}), de duração maior. O navegador envia o \textit{token} de acesso em cada requisição, e a API confere a assinatura antes de atender o pedido, sem precisar consultar uma tabela de sessões. Foi utilizada a biblioteca \texttt{golang-jwt}.
+\item \textbf{bcrypt:} algoritmo de \textit{hash} de senhas. A senha do usuário nunca é gravada; grava-se apenas o resultado do bcrypt, que é propositalmente lento de calcular e inclui um valor aleatório (\textit{salt}), dificultando ataques de força bruta caso o banco de dados seja exposto.
+\end{itemize}
+
+\subsection{Banco de Dados}
+
+\begin{itemize}
+\item \textbf{PostgreSQL 15:} sistema gerenciador de banco de dados relacional de código aberto. Foi escolhido por garantir as propriedades ACID (atomicidade, consistência, isolamento e durabilidade) nas transações, o que é importante para dados financeiros como orçamentos, por oferecer chaves estrangeiras e índices únicos (usados, por exemplo, para impedir dois clientes com o mesmo documento na mesma empresa) e por ser suportado pelos principais provedores de nuvem.
+\end{itemize}
+
+\subsection{\textit{Frontend} (Painel Web)}
+
+\begin{itemize}
+\item \textbf{Next.js:} \textit{framework} para aplicações web baseado em React. Foi utilizado o \textit{App Router}, no qual cada pasta do projeto corresponde a uma rota do painel (por exemplo, \texttt{app/\allowbreak{}dashboard/\allowbreak{}clientes}), o que organiza o código de acordo com as telas.
+\item \textbf{React:} biblioteca para construção de interfaces a partir de componentes reutilizáveis. Formulários, tabelas e janelas de diálogo (\textit{modals}) foram construídos uma vez e reutilizados em todos os módulos.
+\item \textbf{TypeScript:} versão do JavaScript com tipagem estática. Permite declarar o formato dos dados recebidos da API e detectar erros, como um campo com nome errado, ainda durante o desenvolvimento, antes de chegar ao usuário.
+\item \textbf{Tailwind CSS:} \textit{framework} de estilos baseado em classes utilitárias. Facilita a criação de telas responsivas, que se reorganizam em computadores e celulares, sem escrever arquivos CSS extensos.
+\item \textbf{Axios:} biblioteca para requisições HTTP. Por meio de interceptadores (\textit{interceptors}), anexa automaticamente o \textit{token} JWT a toda requisição e renova a sessão quando o \textit{token} de acesso expira (Seção~\ref{sec:integracao-camadas}).
+\end{itemize}
+
+\subsection{Infraestrutura e Implantação}
+
+\begin{itemize}
+\item \textbf{Docker e Docker Compose:} o Docker empacota a API e suas dependências em uma imagem de contêiner, que executa da mesma forma em qualquer máquina. O Docker Compose descreve, em um único arquivo, os contêineres que compõem o sistema (API, banco de dados e \textit{proxy} reverso) e os inicia em conjunto. Foi com ele que o sistema foi executado localmente durante a validação.
+\item \textbf{GitHub Actions:} serviço de automação do GitHub. A cada alteração enviada à ramificação principal do repositório, executa o \textit{pipeline} de CI/CD que constrói a imagem Docker da API e a publica.
+\item \textbf{GHCR (\textit{GitHub Container Registry}):} repositório de imagens de contêiner do GitHub, onde ficam armazenadas as versões da imagem da API prontas para implantação.
+\item \textbf{Máquina virtual (Compute Engine) ou VPS e Kubernetes:} destinos de implantação para os quais a arquitetura foi preparada. A máquina virtual executaria os mesmos contêineres do ambiente local; o Kubernetes, orquestrador de contêineres, é a opção para cenários de maior escala, com os manifestos já versionados no repositório (Seção~\ref{sec:workflow-deploy}).
+\item \textbf{Vercel:} plataforma de hospedagem de aplicações Next.js, com HTTPS e publicação automática a cada alteração no repositório, prevista para o painel e para a página institucional.
+\item \textbf{Armazenamento de mídias:} logo, avatar e fotos de produtos são enviados por URLs assinadas a um \textit{backend} de armazenamento em disco local, habilitado por padrão, com suporte pronto para o \textit{Google Cloud Storage} \cite{gcs-docs} ou para serviços compatíveis com o Amazon S3 \cite{s3-docs}, como o Cloudflare R2 \cite{r2-docs} (Seção~\ref{sec:armazenamento-imagens}).
+\end{itemize}
+
+\subsection{Ferramentas de Apoio}
+
+\begin{itemize}
+\item \textbf{Git e GitHub:} controle de versões do código-fonte dos três repositórios do projeto (API, painel e página institucional).
+\item \textbf{Postman:} ferramenta para enviar requisições manuais à API, usada para validar as rotas durante o desenvolvimento.
+\item \textbf{k6:} ferramenta de testes de carga, usada para medir o desempenho da API (Seção~\ref{sec:desempenho}).
 \end{itemize}
 
 \section{Requisitos do Sistema}
@@ -33,7 +70,7 @@ Os requisitos funcionais definem as capacidades e comportamentos específicos qu
   \centering
   \caption{Requisitos funcionais do sistema.}
   \label{tab:requisitos-funcionais}
-  \begin{tabular}{p{1.3cm}p{11.7cm}}
+  \begin{tabular}{p{1.3cm}p{11.4cm}}
     \hline
     \textbf{Código} & \textbf{Descrição} \\
     \hline
@@ -45,12 +82,11 @@ Os requisitos funcionais definem as capacidades e comportamentos específicos qu
     RF06 & Criar e gerenciar orçamentos, vinculando cliente, itens (produto, medidas e quantidade) e condições de pagamento. \\
     RF07 & Calcular automaticamente subtotal, desconto e valor total de cada orçamento e de cada item. \\
     RF08 & Acompanhar o status comercial do orçamento (rascunho, pendente, enviado, aprovado, rejeitado, cancelado) e o andamento da obra. \\
-    RF09 & Enviar imagens (logo da empresa, avatar do usuário, fotos de produto) por meio de URL assinada, com backend de armazenamento local ou de nuvem (GCS/R2). \\
+    RF09 & Enviar imagens (logo da empresa, avatar do usuário, fotos de produto) por meio de URL assinada, com \textit{backend} de armazenamento local ou de nuvem (GCS/R2). \\
     RF10 & Gerenciar usuários internos por \textit{tenant}, com papéis (\textit{admin}, \textit{manager}, \textit{employee}) e permissões granulares. \\
-    RF11 & Registrar em log de auditoria as operações de criação, atualização, exclusão, login e logout. \\
-    RF12 & Exibir painel (\textit{dashboard}) com indicadores consolidados do negócio. \\
-    RF13 & Capturar leads pela landing page institucional por meio de formulário de lista de espera. \\
-    RF14 & Permitir que usuários sugiram e acompanhem itens de um roadmap (\textit{ideário}) de melhorias. \\
+    RF11 & Exibir painel (\textit{dashboard}) com indicadores consolidados do negócio. \\
+    RF12 & Cadastrar marmorarias interessadas em uma lista de espera, por meio de formulário na página institucional (\textit{landing page}). \\
+    RF13 & Permitir que usuários sugiram e acompanhem itens de um roteiro de melhorias (ideário, ou \textit{roadmap}). \\
     \hline
   \end{tabular}
   \begin{minipage}{0.95\textwidth}
@@ -68,19 +104,20 @@ Os requisitos não funcionais especificam critérios de qualidade, desempenho e 
   \centering
   \caption{Requisitos não funcionais do sistema.}
   \label{tab:requisitos-nao-funcionais}
-  \begin{tabular}{p{1.3cm}p{11.7cm}}
+  \begin{tabular}{p{1.3cm}p{11.4cm}}
     \hline
     \textbf{Código} & \textbf{Descrição} \\
     \hline
     RNF01 & Segurança: senhas com hash bcrypt; autenticação por JWT assinado; URLs de \textit{upload} assinadas com HMAC-SHA256 e expiração curta. \\
     RNF02 & Isolamento \textit{multi-tenant} reforçado em nível de aplicação, com \texttt{tenant\_id} presente em toda tabela de negócio. \\
     RNF03 & Portabilidade: execução via Docker/Docker Compose, reproduzindo localmente a mesma topologia prevista para produção. \\
-    RNF04 & Independência de conta paga para o armazenamento de mídias, com backend local gratuito habilitado por padrão. \\
+    RNF04 & Independência de conta paga para o armazenamento de mídias, com \textit{backend} local gratuito habilitado por padrão. \\
     RNF05 & Responsividade: interface utilizável tanto em \textit{desktop} quanto em dispositivos móveis. \\
     RNF06 & Desempenho: tempos de resposta validados por testes de carga (k6) sob metas pré-definidas. \\
     RNF07 & Manutenibilidade: arquitetura em camadas (\textit{Clean Architecture}) no \textit{backend}, separando domínio, casos de uso, entrega e infraestrutura. \\
-    RNF08 & Integração contínua: \textit{pipeline} de build e publicação de imagens Docker via GitHub Actions e GHCR. \\
+    RNF08 & Integração contínua: \textit{pipeline} de construção (\textit{build}) e publicação de imagens Docker via GitHub Actions e GHCR. \\
     RNF09 & Usabilidade: fluxos de cadastro e navegação simplificados, seguindo heurísticas de usabilidade (Seção~\ref{sec:usabilidade-ux}). \\
+    RNF10 & Rastreabilidade: registro automático, em trilha de auditoria, das operações de criação, atualização, exclusão, \textit{login} e \textit{logout}, e exclusão lógica (\textit{soft delete}) dos registros de negócio, preservando o histórico. \\
     \hline
   \end{tabular}
   \begin{minipage}{0.95\textwidth}
@@ -90,16 +127,18 @@ Os requisitos não funcionais especificam critérios de qualidade, desempenho e 
 \end{table}
 
 
+O registro de auditoria foi classificado como requisito não funcional (RNF10), e não como funcional. O usuário não aciona o registro diretamente: ele acontece de forma automática, em todas as operações, como uma propriedade de qualidade do sistema, a rastreabilidade, ligada à segurança e à conformidade com a LGPD (Seção~\ref{sec:privacidade}). Pelo mesmo motivo, a exclusão lógica (\textit{soft delete}) também integra o RNF10: quando um cliente ou produto é excluído, o registro não é apagado do banco, apenas marcado com a data de exclusão (\texttt{deleted\_at}) e ocultado das listagens. Assim, orçamentos antigos que fazem referência a ele continuam consistentes, e o histórico permanece disponível para auditoria. Já a consulta desse histórico pelo administrador é uma funcionalidade e está descrita como caso de uso (UC09, Seção~\ref{sec:casos-uso-principais}).
+
 \subsection{Backlog de Implementação}
 \label{sec:backlog-implementacao}
 
-A Tabela~\ref{tab:backlog} apresenta o backlog resumido do projeto, consolidando os requisitos funcionais e não funcionais e classificando cada um segundo sua prioridade (Alta, Média ou Baixa) e status de atendimento. A priorização seguiu o princípio de que funcionalidades críticas para a operação comercial da marmoraria -- autenticação, isolamento multi-tenant e o ciclo completo de orçamentos -- receberam prioridade alta, enquanto funcionalidades complementares receberam prioridades inferiores. O status ``Implementado'' indica requisitos funcionais completamente desenvolvidos e testados; ``Atendido'' indica requisitos não funcionais que alcançaram os critérios de qualidade estabelecidos.
+A Tabela~\ref{tab:backlog} apresenta a lista resumida de pendências do projeto (\textit{backlog}), consolidando os requisitos funcionais e não funcionais e classificando cada um segundo sua prioridade (Alta, Média ou Baixa) e status de atendimento. A priorização seguiu o princípio de que funcionalidades críticas para a operação comercial da marmoraria (autenticação, isolamento \textit{multi-tenant} e o ciclo completo de orçamentos) receberam prioridade alta, enquanto funcionalidades complementares receberam prioridades inferiores. O status ``Implementado'' indica requisitos funcionais completamente desenvolvidos e testados; ``Atendido'' indica requisitos não funcionais que alcançaram os critérios de qualidade estabelecidos.
 
 \begin{table}[H]
   \centering
   \caption{Backlog resumido de requisitos do sistema.}
   \label{tab:backlog}
-  \begin{tabular}{p{1.2cm}p{7.9cm}p{1.6cm}p{2.3cm}}
+  \begin{tabular}{p{1.3cm}p{6.5cm}p{2.0cm}p{2.7cm}}
     \hline
     \textbf{ID} & \textbf{Requisito} & \textbf{Prioridade} & \textbf{Status} \\
     \hline
@@ -113,10 +152,9 @@ A Tabela~\ref{tab:backlog} apresenta o backlog resumido do projeto, consolidando
     RF08 & Acompanhamento de status comercial e de obra & Alta & Implementado \\
     RF09 & Envio de imagens via URL assinada (local/nuvem) & Alta & Implementado \\
     RF10 & Gestão de usuários internos com papéis e permissões & Média & Implementado \\
-    RF11 & Log de auditoria das operações & Média & Implementado \\
-    RF12 & \textit{Dashboard} com indicadores consolidados & Média & Implementado \\
-    RF13 & Captura de leads pela \textit{landing page} & Baixa & Implementado \\
-    RF14 & \textit{Roadmap}/ideário de melhorias & Baixa & Implementado \\
+    RF11 & \textit{Dashboard} com indicadores consolidados & Média & Implementado \\
+    RF12 & Lista de espera na página institucional & Baixa & Implementado \\
+    RF13 & Ideário (\textit{roadmap}) de melhorias & Baixa & Implementado \\
     RNF01 & Segurança (bcrypt, JWT, HMAC-SHA256) & Alta & Atendido \\
     RNF02 & Isolamento \textit{multi-tenant} reforçado & Alta & Atendido \\
     RNF03 & Portabilidade via Docker/Docker Compose & Alta & Atendido \\
@@ -126,6 +164,7 @@ A Tabela~\ref{tab:backlog} apresenta o backlog resumido do projeto, consolidando
     RNF07 & Manutenibilidade (\textit{Clean Architecture}) & Média & Atendido \\
     RNF08 & Integração contínua (GitHub Actions/GHCR) & Média & Atendido \\
     RNF09 & Usabilidade dos fluxos de cadastro & Média & Atendido \\
+    RNF10 & Rastreabilidade (auditoria e exclusão lógica) & Média & Atendido \\
     \hline
   \end{tabular}
   \begin{minipage}{0.95\textwidth}
@@ -137,7 +176,7 @@ A Tabela~\ref{tab:backlog} apresenta o backlog resumido do projeto, consolidando
 \section{Modelo de Dados}
 \label{sec:modelo-dados}
 
-Esta seção apresenta o modelo de dados persistido no PostgreSQL. O esquema é composto por oito tabelas principais: \texttt{tenants} armazena a empresa contratante, \texttt{users} os usuários internos, \texttt{clients} e \texttt{products} os cadastros de apoio à operação comercial, \texttt{quotes} e \texttt{quote\_items} os orçamentos e seus itens, \texttt{audits} o histórico de auditoria, e \texttt{waitlist\_leads} os contatos captados pela \textit{landing page}. A Figura~\ref{fig:diagrama-er} apresenta a visão geral do esquema e de seus relacionamentos; as subseções seguintes detalham a estrutura de cada tabela.
+Esta seção apresenta o modelo de dados gravado no PostgreSQL. O esquema é composto por oito tabelas principais: \texttt{tenants} armazena a empresa contratante, \texttt{users} os usuários internos, \texttt{clients} e \texttt{products} os cadastros de apoio à operação comercial, \texttt{quotes} e \texttt{quote\_items} os orçamentos e seus itens, \texttt{audits} o histórico de auditoria, e \texttt{waitlist\_leads} os contatos cadastrados na lista de espera da página institucional. A Figura~\ref{fig:diagrama-er} apresenta a visão geral do esquema e de seus relacionamentos; as subseções seguintes detalham a estrutura de cada tabela. Nas tabelas de estrutura, a coluna ``Aceita nulo?'' indica se o campo pode ficar vazio (SIM) ou se é obrigatório (NÃO); quando o campo tem valor padrão, ele é informado na descrição.
 
 \subsection{Diagrama de Entidade-Relacionamento}
 \label{sec:diagrama-er}
@@ -152,81 +191,77 @@ O diagrama entidade-relacionamento (Figura~\ref{fig:diagrama-er}) descreve o esq
   \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   tbl/.style={
-    rectangle split, rectangle split parts=2, draw, align=left,
+    rectangle split, rectangle split parts=2, draw, align=left, anchor=north,
     font=\footnotesize, rectangle split part align={left,left},
     text width=3.5cm, inner sep=3pt
   },
-  every edge/.style={draw, -{Latex[length=1.8mm]}, thick}
+  rel/.style={draw, thick, -{Latex[length=1.8mm]}},
+  card/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  junction/.style={circle, fill, inner sep=1.2pt}
 ]
+% Grade: colunas x = 0 / 5.5 / 11; canais livres x = -2.6, 2.75 e 8.25
+\def\ybus{-3.7}
 
-\node[tbl] (tenants) at (0,8) {
+\node[tbl] (tenants) at (5.5,0) {
   \textbf{tenants}
   \nodepart{second} \underline{PK id} \\ company\_name \\ cnpj \\ plan, status \\ billing\_active
 };
+\node[tbl] (leads) at (11,0) {
+  \textbf{waitlist\_leads}
+  \nodepart{second} \underline{PK id} \\ name, whatsapp (único) \\ state \\ company\_size \\ quotes\_avg \\ source
+};
 
-\node[tbl] (users) at (7,8) {
+\node[tbl] (users) at (0,-5) {
   \textbf{users}
   \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, email \\ password\_hash \\ role, status \\ permissions (json)
 };
-
-\node[tbl] (clients) at (0,3.2) {
+\node[tbl] (clients) at (5.5,-5) {
   \textbf{clients}
   \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, document \\ document\_type \\ address, city, state \\ is\_active
 };
-
-\node[tbl] (products) at (7,3.2) {
+\node[tbl] (products) at (11,-5) {
   \textbf{products}
   \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ name, price \\ price\_type, stock \\ sku, category \\ is\_active
 };
 
-\node[tbl] (quotes) at (0,-2.2) {
+\node[tbl] (audits) at (0,-10.6) {
+  \textbf{audits}
+  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK user\_id (opcional) \\ module, action \\ object\_id, object\_name \\ status\_code
+};
+\node[tbl] (quotes) at (5.5,-10.6) {
   \textbf{quotes}
   \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK client\_id \\ FK user\_id \\ subtotal, discount \\ total\_value \\ status, work\_status
 };
-
-\node[tbl] (quoteitems) at (7,-2.2) {
+\node[tbl] (quoteitems) at (11,-10.6) {
   \textbf{quote\_items}
   \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK quote\_id \\ FK product\_id \\ width\_cm, height\_cm \\ unit\_price, quantity \\ total
 };
 
-\node[tbl] (audits) at (0,-7.6) {
-  \textbf{audits}
-  \nodepart{second} \underline{PK id} \\ FK tenant\_id \\ FK user\_id (nullable) \\ module, action \\ object\_id, object\_name \\ status\_code
-};
+% tenants (1) -> N: barramento horizontal abaixo de tenants
+\draw[thick] (tenants.south) -- node[card, right, pos=0.35] {1} (5.5,\ybus);
+\draw[thick] (-2.6,\ybus) -- (11,\ybus);
+\foreach \x in {-2.6,0,5.5,8.25,11} { \node[junction] at (\x,\ybus) {}; }
+\draw[rel] (0,\ybus)   -- node[card, right, pos=0.75] {N} (users.north);
+\draw[rel] (5.5,\ybus) -- node[card, right, pos=0.75] {N} (clients.north);
+\draw[rel] (11,\ybus)  -- node[card, right, pos=0.75] {N} (products.north);
+\draw[rel] (-2.6,\ybus) |- node[card, above, pos=0.9] {N} (audits.west);
+\draw[rel] (8.25,\ybus) |- node[card, above, pos=0.85] {N} ($(quotes.east)+(0,0.9)$);
 
-\node[tbl] (leads) at (7,-7.6) {
-  \textbf{waitlist\_leads}
-  \nodepart{second} \underline{PK id} \\ name, whatsapp (unique) \\ state \\ company\_size \\ quotes\_avg \\ source
-};
+% Demais relacionamentos
+\draw[rel] (users.south) -- node[card, right, pos=0.2] {0..1} node[card, right, pos=0.8] {N} (audits.north);
+\draw[rel] (users.east) -- ++(0.9,0) node[card, above, pos=0.5] {1} |- node[card, above, pos=0.85] {N} (quotes.west);
+\draw[rel] (clients.south) -- node[card, right, pos=0.2] {1} node[card, right, pos=0.8] {N} (quotes.north);
+\draw[rel] (products.south) -- node[card, right, pos=0.2] {1} node[card, right, pos=0.8] {N} (quoteitems.north);
+\draw[rel] ($(quotes.east)+(0,-0.6)$) -- node[card, above, pos=0.15] {1} node[card, above, pos=0.85] {N} ($(quotes.east)+(0,-0.6)$ -| quoteitems.west);
 
-% Relacionamentos (crow's foot simplificado com rótulos 1/N)
-\draw (tenants.south) to["1"] ["N"'] (users.north);
-\draw (tenants) to[bend right=10, "1"] ["N"'] (clients);
-\draw (tenants) to[bend left=10, "1"] ["N"'] (products);
-% Spine à esquerda (x=-3.4), fora de todas as caixas, para tenants->quotes e tenants->audits
-\draw (tenants.west) -| ++(-3.4,0) node[pos=0.15, above, font=\scriptsize] {1}
-      |- ($(quotes.west)+(-1.55,0)$) -- (quotes.west);
-\node[font=\scriptsize] at (-3.65,-2.0) {N};
-\draw (tenants.west) -| ++(-4.3,0)
-      |- ($(audits.west)+(-2.45,0)$) -- (audits.west);
-\node[font=\scriptsize] at (-4.55,-7.4) {N};
-\draw (clients.south) to["1"] ["N"'] (quotes.north);
-\draw (users) to[bend left=15, "1"] ["N"'] (quotes);
-% Spine à direita (x=9.6) para users->audits, contornando quote_items
-\draw (users.east) -| ++(1.0,-0.3) node[pos=0.2, above, font=\scriptsize] {0..1}
-      |- ($(audits.east)+(1.9,0)$) -- (audits.east);
-\node[font=\scriptsize] at (9.85,-7.4) {N};
-\draw (quotes.south) to["1"] ["N"'] (quoteitems.north);
-\draw (products) to[bend right=15, "1"] ["N"'] (quoteitems);
-
-\node[font=\scriptsize, align=left, anchor=north west] at (10.7,8) {
+\node[font=\scriptsize, align=left, anchor=north west] at (-3.2,0) {
   \textbf{Legenda}\\
   PK = chave primária\\
   FK = chave estrangeira\\
-  1 / N = cardinalidade\\
-  (isolamento multi-tenant:\\ toda tabela de negócio\\ carrega tenant\_id)
+  1 / N / 0..1 = cardinalidade\\
+  seta: da tabela referenciada\\ para a que guarda a FK\\[3pt]
+  Toda tabela de negócio\\ carrega \texttt{tenant\_id}\\ (isolamento por empresa);\\ \texttt{waitlist\_leads} guarda\\ contatos pré-venda e\\ não tem \texttt{tenant\_id}
 };
-
 \end{tikzpicture}
 }
 \end{figure}
@@ -242,9 +277,9 @@ A Tabela~\ref{tab:tabela-tenants} apresenta a estrutura da tabela \texttt{tenant
   \centering
   \caption{Estrutura da tabela \texttt{tenants}.}
   \label{tab:tabela-tenants}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     company\_name & TEXT & NÃO & Razão social da empresa \\
@@ -276,9 +311,9 @@ A Tabela~\ref{tab:tabela-users} apresenta a estrutura da tabela \texttt{users}, 
   \centering
   \caption{Estrutura da tabela \texttt{users}.}
   \label{tab:tabela-users}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
@@ -308,9 +343,9 @@ A Tabela~\ref{tab:tabela-clients} apresenta a estrutura da tabela \texttt{client
   \centering
   \caption{Estrutura da tabela \texttt{clients}.}
   \label{tab:tabela-clients}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
@@ -341,9 +376,9 @@ A Tabela~\ref{tab:tabela-products} apresenta a estrutura da tabela \texttt{produ
   \centering
   \caption{Estrutura da tabela \texttt{products}.}
   \label{tab:tabela-products}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
@@ -375,9 +410,9 @@ A Tabela~\ref{tab:tabela-quotes} apresenta a estrutura da tabela \texttt{quotes}
   \centering
   \caption{Estrutura da tabela \texttt{quotes}.}
   \label{tab:tabela-quotes}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id, client\_id, user\_id & UUID & NÃO & FK para \texttt{tenants}, \texttt{clients} e \texttt{users} \\
@@ -398,7 +433,7 @@ A Tabela~\ref{tab:tabela-quotes} apresenta a estrutura da tabela \texttt{quotes}
   \end{minipage}
 \end{table}
 
-O campo \texttt{status} representa o ciclo comercial do orçamento, enquanto \texttt{work\_status} representa o andamento da execução da obra após a aprovação -- os dois campos evoluem de forma independente e são inicializados automaticamente quando o orçamento é aprovado pela primeira vez, conforme detalhado no Diagrama de Atividades (Figura~\ref{fig:diagrama-atividades}).
+O campo \texttt{status} representa o ciclo comercial do orçamento, enquanto \texttt{work\_status} representa o andamento da execução da obra após a aprovação. Os dois campos evoluem de forma independente e são inicializados automaticamente quando o orçamento é aprovado pela primeira vez, conforme detalhado no Diagrama de Atividades (Figura~\ref{fig:diagrama-atividades}).
 
 \subsection{Tabela quote\_items}
 \label{sec:tabela-quote-items}
@@ -409,9 +444,9 @@ A Tabela~\ref{tab:tabela-quote-items} apresenta a estrutura da tabela \texttt{qu
   \centering
   \caption{Estrutura da tabela \texttt{quote\_items}.}
   \label{tab:tabela-quote-items}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id, quote\_id, product\_id & UUID & NÃO & FK para \texttt{tenants}, \texttt{quotes} e \texttt{products} \\
@@ -440,9 +475,9 @@ A Tabela~\ref{tab:tabela-audits} apresenta a estrutura da tabela \texttt{audits}
   \centering
   \caption{Estrutura da tabela \texttt{audits}.}
   \label{tab:tabela-audits}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     tenant\_id & UUID & NÃO & FK para \texttt{tenants.id} \\
@@ -468,15 +503,15 @@ Os campos \texttt{user\_name}, \texttt{user\_email} e \texttt{user\_role} preser
 \subsection{Tabela waitlist\_leads}
 \label{sec:tabela-waitlist-leads}
 
-A Tabela~\ref{tab:tabela-waitlist-leads} apresenta a estrutura da tabela \texttt{waitlist\_leads}, que armazena os contatos captados pela \textit{landing page} institucional.
+A Tabela~\ref{tab:tabela-waitlist-leads} apresenta a estrutura da tabela \texttt{waitlist\_leads}, que armazena os contatos cadastrados na lista de espera da página institucional.
 
 \begin{table}[H]
   \centering
   \caption{Estrutura da tabela \texttt{waitlist\_leads}.}
   \label{tab:tabela-waitlist-leads}
-  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.1cm}p{6.2cm}}
+  \begin{tabular}{p{3.1cm}p{2.3cm}p{1.6cm}p{5.7cm}}
     \hline
-    \textbf{Campo} & \textbf{Tipo} & \textbf{Nulo} & \textbf{Descrição} \\
+    \textbf{Campo} & \textbf{Tipo} & \textbf{Aceita nulo?} & \textbf{Descrição} \\
     \hline
     id & UUID & NÃO & Chave primária \\
     name & TEXT & NÃO & Nome do interessado \\
@@ -494,30 +529,31 @@ A Tabela~\ref{tab:tabela-waitlist-leads} apresenta a estrutura da tabela \texttt
   \end{minipage}
 \end{table}
 
-Esta tabela não possui \texttt{tenant\_id}: por se tratar de captação de leads pré-venda, os registros ainda não pertencem a nenhuma empresa cadastrada no sistema. O índice único em \texttt{whatsapp} impede cadastros duplicados, retornando HTTP 409 quando o número já existe (UC12).
+Esta tabela não possui \texttt{tenant\_id}: por se tratar de contatos de interessados, ainda antes da venda, os registros ainda não pertencem a nenhuma empresa cadastrada no sistema. O índice único em \texttt{whatsapp} impede cadastros duplicados, retornando HTTP 409 quando o número já existe (UC12).
 
 \subsection{Considerações sobre Privacidade e Segurança}
+\label{sec:privacidade}
 \label{sec:privacidade-modelo-dados}
 
-Os dados armazenados nas tabelas \texttt{clients} (CPF/CNPJ, endereço, contato) e \texttt{users} (nome, e-mail) são considerados dados pessoais segundo a Lei Geral de Proteção de Dados (LGPD -- Lei 13.709/2018). O sistema implementa as seguintes medidas de conformidade:
+Os dados armazenados nas tabelas \texttt{clients} (CPF/CNPJ, endereço, contato) e \texttt{users} (nome, e-mail) são considerados dados pessoais segundo a Lei Geral de Proteção de Dados, LGPD (Lei 13.709/2018) \cite{lgpd2018}. O sistema implementa as seguintes medidas de conformidade:
 
 \begin{itemize}
 \item \textbf{Finalidade específica:} documentos e dados de contato de clientes são coletados exclusivamente para emissão de orçamentos e relacionamento comercial da marmoraria com seus próprios clientes.
-\item \textbf{Isolamento por tenant:} cada empresa acessa exclusivamente os dados de seus próprios clientes e usuários, reforçado pelo \texttt{tenant\_id} presente em toda tabela de negócio (RNF02).
+\item \textbf{Isolamento por empresa (\textit{tenant}):} cada empresa acessa exclusivamente os dados de seus próprios clientes e usuários, reforçado pelo \texttt{tenant\_id} presente em toda tabela de negócio (RNF02).
 \item \textbf{Minimização e exclusão lógica:} campos de endereço são opcionais, e a exclusão de um cliente ou produto é lógica (\texttt{deleted\_at}), preservando o histórico de orçamentos já emitidos sem expor o registro nas listagens ativas.
 \item \textbf{Controle de acesso:} senhas são armazenadas apenas como hash bcrypt (nunca em texto plano), e o banco de dados é acessível apenas pela aplicação, por meio de credenciais configuradas em variáveis de ambiente.
-\item \textbf{Rastreabilidade:} toda operação de criação, atualização e exclusão sobre dados de clientes e usuários é registrada na tabela \texttt{audits} (UC09), permitindo auditoria de acessos.
+\item \textbf{Rastreabilidade:} toda operação de criação, atualização e exclusão sobre dados de clientes e usuários é registrada na tabela \texttt{audits} (RNF10), e o administrador pode consultar esse histórico (UC09).
 \end{itemize}
 
 \section{Modelagem do Sistema}
 \label{sec:modelagem-sistema}
 
-Esta seção apresenta a modelagem do sistema por meio de diagramas UML (\textit{Unified Modeling Language}) e de um diagrama entidade-relacionamento, construídos a partir da aplicação efetivamente implementada -- entidades de domínio, rotas da API e fluxos de autenticação e de envio de arquivos descritos nas seções anteriores -- e não de um modelo genérico ou hipotético. Os diagramas foram desenhados de forma nativa em \LaTeX/TikZ, garantindo que permaneçam versionados como código-fonte junto ao restante do texto, sejam renderizados em alta resolução (vetorial) e possam ser atualizados caso o modelo de domínio evolua.
+Esta seção apresenta a modelagem do sistema por meio de diagramas UML (\textit{Unified Modeling Language}) e de um diagrama entidade-relacionamento, construídos a partir da aplicação efetivamente implementada (entidades de domínio, rotas da API e fluxos de autenticação e de envio de arquivos descritos nas seções anteriores), e não de um modelo genérico ou hipotético. Os diagramas foram desenhados de forma nativa em \LaTeX/TikZ, garantindo que permaneçam versionados como código-fonte junto ao restante do texto, sejam renderizados em alta resolução (vetorial) e possam ser atualizados caso o modelo de domínio evolua.
 
 \subsection{Diagrama de Casos de Uso}
 \label{sec:diagrama-casos-uso}
 
-O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as interações entre os três perfis de ator identificados na aplicação -- Administrador e Colaborador (usuários internos autenticados de um \textit{tenant}, diferenciados por papel e permissões) e Visitante (usuário não autenticado da landing page) -- e as principais funcionalidades expostas pelo sistema, derivadas diretamente dos módulos de rota descritos na Tabela~\ref{tab:endpoints-api}.
+O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as interações entre os três perfis de ator identificados na aplicação, Administrador e Colaborador (usuários internos autenticados de uma empresa, diferenciados por papel e permissões) e Visitante (usuário não autenticado da página institucional), e as principais funcionalidades expostas pelo sistema, derivadas diretamente dos módulos de rota descritos na Tabela~\ref{tab:endpoints-api}. Para que o diagrama fique legível, foi usada a generalização entre atores da UML: o Administrador é um tipo especial de Colaborador e, por isso, herda todos os casos de uso ligados ao Colaborador, sendo ligado diretamente apenas aos casos de uso exclusivos dele (configurar a empresa, gerenciar usuários e consultar a auditoria). As setas tracejadas indicam as relações \textit{\guillemotleft include\guillemotright} descritas na Seção~\ref{sec:relacionamentos-casos-uso}.
 
 \begin{figure}[H]
   \centering
@@ -526,13 +562,13 @@ O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as in
   \label{fig:diagrama-casos-uso}
   \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
-  usecase/.style={draw, ellipse, minimum width=3.6cm, minimum height=0.9cm, align=center, font=\small},
-  every path/.style={draw, -}
+  usecase/.style={draw, ellipse, minimum width=3.7cm, minimum height=0.95cm, align=center, font=\small, fill=white},
+  assoc/.style={draw},
+  incl/.style={draw, dashed, -{Stealth[length=2mm]}},
+  inclabel/.style={font=\scriptsize, fill=white, inner sep=1pt}
 ]
 
-% Actor drawing macro (stick figure); #3 is a name used to reference the
-% actor's "hand" coordinate later, so association lines start at the
-% figure itself instead of an arbitrary shared point.
+% Ator (boneco); #3 nomeia o ponto de onde saem as associações
 \newcommand{\tccStickFigure}[3]{
   \begin{scope}[shift={#1}]
     \draw[thick] (0,0.9) circle (0.18);
@@ -542,59 +578,55 @@ O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as in
     \draw[thick] (0,0.1) -- (0.22,-0.25);
     \node[below, font=\small\bfseries, align=center] at (0,-0.35) {#2};
     \coordinate (#3) at (0.28,0.55);
+    \coordinate (#3top) at (0,1.1);
+    \coordinate (#3bottom) at (0,-0.75);
   \end{scope}
 }
 
-\tccStickFigure{(-8.6,1.6)}{Administrador}{admHand}
-\tccStickFigure{(-8.6,-3.0)}{Colaborador}{colHand}
-\tccStickFigure{(8.6,-0.7)}{Visitante}{visHand}
-
 \begin{scope}[on background layer]
-  \draw[rounded corners, draw=black!60] (-5.6,3.1) rectangle (6.0,-4.6);
+  \draw[rounded corners, draw=black!60] (-4.9,3.9) rectangle (4.9,-9.2);
 \end{scope}
-\node[font=\bfseries\small] at (0.2,3.4) {Sistema Onmarmoraria};
+\node[font=\bfseries\small] at (0,4.2) {Sistema Onmarmoraria};
 
-\node[usecase] (login)      at (-3.6,2.4)  {Autenticar-se\\(login)};
-\node[usecase] (provision)  at (0.2,2.4)   {Provisionar\\nova empresa};
-\node[usecase] (clientes)   at (-3.6,0.9)  {Gerenciar\\clientes};
-\node[usecase] (produtos)   at (0.2,0.9)   {Gerenciar\\produtos};
-\node[usecase] (orcamentos) at (4.2,0.9)   {Gerenciar\\orçamentos};
-\node[usecase] (upload)     at (-3.6,-0.6) {Enviar imagem\\(logo/avatar/produto)};
-\node[usecase] (config)     at (0.2,-0.6)  {Configurar\\empresa};
-\node[usecase] (dash)       at (4.2,-0.6)  {Consultar\\indicadores};
-\node[usecase] (auditoria)  at (-3.6,-2.1) {Consultar\\auditoria};
-\node[usecase] (usuarios)   at (0.2,-2.1)  {Gerenciar\\usuários};
-\node[usecase] (ideario)    at (4.2,-2.1)  {Sugerir/gerir\\itens do roadmap};
-\node[usecase] (waitlist)   at (8.6,1.4)   {Cadastrar-se\\na lista de espera};
+% Coluna esquerda: casos de uso do Colaborador (herdados pelo Administrador)
+\node[usecase] (login)      at (-2.5,3.0)  {Autenticar-se\\(login)};
+\node[usecase] (clientes)   at (-2.5,1.6)  {Gerenciar\\clientes};
+\node[usecase] (produtos)   at (-2.5,0.2)  {Gerenciar\\produtos};
+\node[usecase] (orcamentos) at (-2.5,-1.2) {Gerenciar\\orçamentos};
+\node[usecase] (dash)       at (-2.5,-2.6) {Consultar\\indicadores};
+\node[usecase] (ideario)    at (-2.5,-4.0) {Sugerir/gerir\\itens do roadmap};
+% Coluna esquerda, parte inferior: exclusivos do Administrador
+\node[usecase] (config)     at (-2.5,-5.6) {Configurar\\empresa};
+\node[usecase] (usuarios)   at (-2.5,-7.0) {Gerenciar\\usuários};
+\node[usecase] (auditoria)  at (-2.5,-8.4) {Consultar\\auditoria};
+% Coluna direita
+\node[usecase] (provision)  at (2.5,3.0)   {Provisionar\\nova empresa};
+\node[usecase] (waitlist)   at (2.5,1.4)   {Cadastrar-se na\\lista de espera};
+\node[usecase] (upload)     at (2.5,-2.6)  {Enviar imagem\\(logo/avatar/produto)};
 
-% -------- Administrador: liga-se a todos os casos de uso (linhas em
-% leque, cada uma com uma curvatura levemente distinta para não ficar
-% colineares e cruzar dentro de outras elipses) --------
-\draw (admHand) to[out=-10,in=160]  (login.west);
-\draw (admHand) to[out=-15,in=170]  (provision.west);
-\draw (admHand) to[out=-20,in=170]  (clientes.west);
-\draw (admHand) to[out=-25,in=175]  (produtos.west);
-\draw (admHand) to[out=-28,in=175]  (orcamentos.north west);
-\draw (admHand) to[out=-32,in=175]  (upload.west);
-\draw (admHand) to[out=-36,in=175]  (config.west);
-\draw (admHand) to[out=-40,in=180]  (dash.north west);
-\draw (admHand) to[out=-44,in=190]  (auditoria.west);
-\draw (admHand) to[out=-48,in=185]  (usuarios.west);
-\draw (admHand) to[out=-52,in=185]  (ideario.north west);
+\tccStickFigure{(-7.6,-0.6)}{Colaborador}{col}
+\tccStickFigure{(-7.6,-7.6)}{Administrador}{adm}
+\tccStickFigure{(7.4,1.6)}{Visitante}{vis}
 
-% -------- Colaborador: subconjunto operacional do dia a dia --------
-\draw (colHand) to[out=25,in=190]  (login.south west);
-\draw (colHand) to[out=20,in=200]  (clientes.west);
-\draw (colHand) to[out=15,in=200]  (produtos.west);
-\draw (colHand) to[out=10,in=200]  (orcamentos.south west);
-\draw (colHand) to[out=5,in=205]   (upload.west);
-\draw (colHand) to[out=0,in=210]   (dash.south west);
-\draw (colHand) to[out=-5,in=215]  (ideario.south west);
+% Generalização: Administrador é um Colaborador com permissões adicionais
+\draw[-{Triangle[open, length=3mm, width=3mm]}] (admtop) -- (colbottom);
 
-% -------- Visitante: interações públicas --------
-\draw (visHand) to[out=170,in=10]  (waitlist.east);
-\draw (visHand) to[out=195,in=-15] (login.east);
+\foreach \uc in {login,clientes,produtos,orcamentos,dash,ideario} { \draw[assoc] (col) -- (\uc.west); }
+\foreach \uc in {config,usuarios,auditoria} { \draw[assoc] (adm) -- (\uc.west); }
+\draw[assoc] ($(vis)+(-0.56,0)$) -- (provision.east);
+\draw[assoc] ($(vis)+(-0.56,0)$) -- (waitlist.east);
 
+% Relacionamentos <<include>>
+\draw[incl] (provision.west) -- node[inclabel, above] {\guillemotleft include\guillemotright} (login.east);
+\draw[incl] (produtos.east) -- node[inclabel, sloped, above] {\guillemotleft include\guillemotright} (upload.north west);
+\draw[incl] (config.east) -- node[inclabel, sloped, below] {\guillemotleft include\guillemotright} (upload.south west);
+
+\node[font=\scriptsize, align=left, anchor=north west] at (5.3,-3.6) {
+  \textbf{Legenda}\\
+  linha cheia = associação\\
+  seta tracejada = \guillemotleft include\guillemotright\\
+  triângulo vazado =\\ generalização (o Admi-\\nistrador herda os casos\\ de uso do Colaborador)
+};
 \end{tikzpicture}
 }
 \end{figure}
@@ -608,24 +640,24 @@ O diagrama de casos de uso (Figura~\ref{fig:diagrama-casos-uso}) sintetiza as in
 Esta subseção detalha os doze casos de uso identificados no diagrama da Figura~\ref{fig:diagrama-casos-uso}, especificando ator, descrição, pré-condição, fluxo principal e, quando aplicável, fluxo alternativo e pós-condição.
 
 \medskip
-\noindent\textbf{UC01 -- Autenticar-se (login)}\\
+\noindent\textbf{UC01: Autenticar-se (login)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
 \textbf{Descrição:} Usuário informa e-mail e senha; o sistema valida as credenciais e emite tokens de acesso.\\
 \textbf{Pré-condição:} Usuário possui conta ativa em um \textit{tenant}.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
-  \item Usuário acessa a tela de login e informa e-mail e senha.
+  \item Usuário acessa a tela de \textit{login} e informa e-mail e senha.
   \item Sistema consulta o usuário pelo e-mail.
   \item Sistema verifica a senha através de hash bcrypt.
   \item Sistema emite \textit{access token} e \textit{refresh token} (JWT) com \textit{claims} de \texttt{user\_id}, \texttt{tenant\_id}, e-mail, papel e permissões.
-  \item \textit{Frontend} persiste os tokens e o \texttt{tenant\_id}.
+  \item \textit{Frontend} persiste os \textit{tokens} e o \texttt{tenant\_id}.
   \item Sistema redireciona o usuário para o \textit{dashboard}.
 \end{enumerate}
 \textbf{Fluxo Alternativo -- Credenciais inválidas:} No passo 3, o sistema retorna erro genérico de credenciais inválidas, sem revelar se o e-mail está cadastrado.\\
 \textbf{Pós-condição:} usuário autenticado; requisições seguintes enviam \texttt{Authorization: Bearer <token>} (ver Figura~\ref{fig:sequencia-login}).
 
 \medskip
-\noindent\textbf{UC02 -- Provisionar nova empresa}\\
+\noindent\textbf{UC02: Provisionar nova empresa}\\
 \textbf{Ator:} Visitante.\\
 \textbf{Descrição:} Cria uma nova empresa (\textit{tenant}) e o respectivo usuário administrador em uma única operação, por meio do \textit{endpoint} público \texttt{/auth/provision}.\\
 \textbf{Pré-condição:} Nenhuma (\textit{endpoint} público).\\
@@ -634,12 +666,12 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item Usuário preenche dados da empresa (razão social, CNPJ) e do administrador (nome, e-mail, senha).
   \item Sistema cria o \textit{tenant} com o plano selecionado (padrão: \textit{essencial}).
   \item Sistema cria o usuário administrador vinculado ao \textit{tenant}.
-  \item Sistema retorna tokens de autenticação, autenticando automaticamente o administrador recém-criado.
+  \item Sistema retorna \textit{tokens} de autenticação, autenticando automaticamente o administrador recém-criado.
 \end{enumerate}
 \textbf{Pós-condição:} Novo \textit{tenant} ativo e administrador autenticado, pronto para uso do sistema.
 
 \medskip
-\noindent\textbf{UC03 -- Gerenciar clientes}\\
+\noindent\textbf{UC03: Gerenciar clientes}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
 \textbf{Descrição:} Cadastro, edição, listagem e exclusão lógica de clientes pessoa física ou jurídica.\\
 \textbf{Pré-condição:} Usuário autenticado com permissão sobre o módulo de clientes.\\
@@ -650,11 +682,11 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item Sistema valida o documento (dígito verificador) e a unicidade por \textit{tenant}.
   \item Sistema persiste o cliente.
 \end{enumerate}
-\textbf{Fluxo Alternativo -- Documento inválido ou duplicado:} no passo 3, o sistema rejeita o cadastro e exibe mensagem de erro.\\
+\textbf{Fluxo Alternativo (documento inválido ou duplicado):} no passo 3, o sistema rejeita o cadastro e exibe mensagem de erro.\\
 \textbf{Pós-condição:} cliente disponível para vinculação a orçamentos (UC05).
 
 \medskip
-\noindent\textbf{UC04 -- Gerenciar produtos}\\
+\noindent\textbf{UC04: Gerenciar produtos}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
 \textbf{Descrição:} Cadastro, edição, listagem e exclusão do catálogo de produtos e serviços da marmoraria.\\
 \textbf{Pré-condição:} usuário autenticado com permissão sobre o módulo de produtos.\\
@@ -668,7 +700,7 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \textbf{Pós-condição:} Produto disponível para composição de orçamentos (UC05).
 
 \medskip
-\noindent\textbf{UC05 -- Gerenciar orçamentos}\\
+\noindent\textbf{UC05: Gerenciar orçamentos}\\
 \textbf{Ator:} Administrador, Colaborador (com permissão).\\
 \textbf{Descrição:} Criação e acompanhamento de orçamentos, vinculando cliente e itens (produto, medidas, quantidade), com cálculo automático de valores e acompanhamento do status comercial e da execução da obra.\\
 \textbf{Pré-condição:} Usuário autenticado; cliente e produtos previamente cadastrados.\\
@@ -683,7 +715,7 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \textbf{Pós-condição:} orçamento disponível na listagem, com histórico auditável de mudanças de status (UC09).
 
 \medskip
-\noindent\textbf{UC06 -- Enviar imagem (logo/avatar/produto)}\\
+\noindent\textbf{UC06: Enviar imagem (logo/avatar/produto)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
 \textbf{Descrição:} Envio de imagens ao sistema (logo da empresa, avatar do usuário ou fotos de produto) por meio de URL assinada.\\
 \textbf{Pré-condição:} Usuário autenticado.\\
@@ -698,20 +730,20 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \textbf{Pós-condição:} Imagem disponível para exibição por meio de URL de leitura.
 
 \medskip
-\noindent\textbf{UC07 -- Configurar empresa}\\
+\noindent\textbf{UC07: Configurar empresa}\\
 \textbf{Ator:} Administrador.\\
 \textbf{Descrição:} Edição de dados e preferências da empresa, incluindo o logo institucional.\\
 \textbf{Pré-condição:} Usuário autenticado com papel \textit{admin}.\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Administrador acessa a tela de configurações.
-  \item Administrador edita dados da empresa e, opcionalmente, envia novo logo (\textit{«include»} UC06).
+  \item Administrador edita dados da empresa e, opcionalmente, envia novo logo (\textit{\guillemotleft include\guillemotright} UC06).
   \item Sistema persiste as alterações.
 \end{enumerate}
 \textbf{Pós-condição:} configurações atualizadas refletidas em toda a aplicação.
 
 \medskip
-\noindent\textbf{UC08 -- Consultar indicadores (dashboard)}\\
+\noindent\textbf{UC08: Consultar indicadores (dashboard)}\\
 \textbf{Ator:} Administrador, Colaborador.\\
 \textbf{Descrição:} Visualização de painel com indicadores consolidados do negócio.\\
 \textbf{Pré-condição:} Usuário autenticado.\\
@@ -724,7 +756,7 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \textbf{Pós-condição:} Usuário informado sobre a situação atual do negócio.
 
 \medskip
-\noindent\textbf{UC09 -- Consultar auditoria}\\
+\noindent\textbf{UC09: Consultar auditoria}\\
 \textbf{Ator:} Administrador.\\
 \textbf{Descrição:} Consulta ao log de auditoria das operações realizadas no sistema, com filtros por módulo, ação e usuário.\\
 \textbf{Pré-condição:} Usuário autenticado com papel \textit{admin}.\\
@@ -732,12 +764,12 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \begin{enumerate}
   \item Administrador acessa a tela de auditoria.
   \item Administrador aplica filtros (módulo, ação, usuário, período).
-  \item Sistema retorna os registros correspondentes, previamente gravados de forma automática pelo \textit{middleware} de auditoria a cada operação de criação, atualização, exclusão, login ou logout.
+  \item Sistema retorna os registros correspondentes, previamente gravados de forma automática pelo \textit{middleware} de auditoria a cada operação de criação, atualização, exclusão, \textit{login} ou logout.
 \end{enumerate}
 \textbf{Pós-condição:} administrador informado sobre o histórico de ações no sistema.
 
 \medskip
-\noindent\textbf{UC10 -- Gerenciar usuários}\\
+\noindent\textbf{UC10: Gerenciar usuários}\\
 \textbf{Ator:} Administrador.\\
 \textbf{Descrição:} cadastro, edição e desativação de usuários internos do \textit{tenant}, com definição de papel e permissões.\\
 \textbf{Pré-condição:} usuário autenticado com papel \textit{admin}.\\
@@ -748,11 +780,11 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
   \item Sistema valida o limite de usuários do plano contratado.
   \item Sistema persiste o novo usuário.
 \end{enumerate}
-\textbf{Fluxo Alternativo -- Limite do plano atingido:} no passo 3, o sistema rejeita o cadastro informando que o limite de usuários do plano foi atingido.\\
+\textbf{Fluxo Alternativo (limite do plano atingido):} no passo 3, o sistema rejeita o cadastro informando que o limite de usuários do plano foi atingido.\\
 \textbf{Pós-condição:} novo usuário habilitado a autenticar-se no sistema (UC01).
 
 \medskip
-\noindent\textbf{UC11 -- Sugerir/gerir itens do roadmap}\\
+\noindent\textbf{UC11: Sugerir/gerir itens do roadmap}\\
 \textbf{Ator:} Administrador, Colaborador (sugestão); Administrador (gestão do status).\\
 \textbf{Descrição:} usuários registram sugestões de melhoria (\textit{ideário}); o administrador acompanha e gerencia o status dos itens.\\
 \textbf{Pré-condição:} usuário autenticado.\\
@@ -765,16 +797,16 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 \textbf{Pós-condição:} sugestão disponível para acompanhamento por toda a equipe do \textit{tenant}.
 
 \medskip
-\noindent\textbf{UC12 -- Cadastrar-se na lista de espera}\\
+\noindent\textbf{UC12: Cadastrar-se na lista de espera}\\
 \textbf{Ator:} Visitante.\\
-\textbf{Descrição:} visitante da \textit{landing page} se cadastra para receber contato antes do lançamento comercial completo.\\
+\textbf{Descrição:} visitante da página institucional se cadastra para receber contato antes do lançamento comercial completo.\\
 \textbf{Pré-condição:} nenhuma (\textit{endpoint} público).\\
 \textbf{Fluxo Principal:}
 \begin{enumerate}
   \item Visitante preenche formulário com nome, WhatsApp, estado, porte da equipe e volume médio de orçamentos.
-  \item Sistema persiste o \textit{lead} na tabela \texttt{waitlist\_leads}.
+  \item Sistema grava o contato na tabela \texttt{waitlist\_leads}.
 \end{enumerate}
-\textbf{Fluxo Alternativo -- WhatsApp já cadastrado:} no passo 2, o sistema responde HTTP 409 e a interface informa o visitante.\\
+\textbf{Fluxo Alternativo (whatsApp já cadastrado):} no passo 2, o sistema responde HTTP 409 e a interface informa o visitante.\\
 \textbf{Pós-condição:} \textit{lead} registrado para contato futuro.
 
 \subsubsection{Relacionamentos entre Casos de Uso}
@@ -783,9 +815,9 @@ Esta subseção detalha os doze casos de uso identificados no diagrama da Figura
 O diagrama apresenta os seguintes relacionamentos entre casos de uso, identificados a partir do comportamento real da aplicação:
 
 \begin{itemize}
-\item \textit{«include»}: UC02 (Provisionar nova empresa) \textit{«include»} UC01 (Autenticar-se) -- o provisionamento retorna os mesmos tokens de autenticação emitidos no login, autenticando automaticamente o administrador recém-criado, sem exigir uma segunda submissão de credenciais.
-\item \textit{«include»}: UC04 (Gerenciar produtos) \textit{«include»} UC06 (Enviar imagem) -- o cadastro de um produto pode incluir o envio de uma fotografia associada.
-\item \textit{«include»}: UC07 (Configurar empresa) \textit{«include»} UC06 (Enviar imagem) -- a atualização dos dados da empresa pode incluir o envio de um novo logo.
+\item \textit{\guillemotleft include\guillemotright}: UC02 (Provisionar nova empresa) \textit{\guillemotleft include\guillemotright} UC01 (Autenticar-se): o provisionamento retorna os mesmos \textit{tokens} de autenticação emitidos no \textit{login}, autenticando automaticamente o administrador recém-criado, sem exigir uma segunda submissão de credenciais.
+\item \textit{\guillemotleft include\guillemotright}: UC04 (Gerenciar produtos) \textit{\guillemotleft include\guillemotright} UC06 (Enviar imagem): o cadastro de um produto pode incluir o envio de uma fotografia associada.
+\item \textit{\guillemotleft include\guillemotright}: UC07 (Configurar empresa) \textit{\guillemotleft include\guillemotright} UC06 (Enviar imagem): a atualização dos dados da empresa pode incluir o envio de um novo logo.
 \end{itemize}
 
 Diferentemente de sistemas com fluxos condicionais mais elaborados, o conjunto de casos de uso do Onmarmoraria não apresenta relacionamentos \textit{«extend»} relevantes: os fluxos opcionais, como o cancelamento de um orçamento, são tratados como transições de estado dentro do próprio caso de uso (UC05), documentadas no Diagrama de Atividades (Figura~\ref{fig:diagrama-atividades}), e não como funcionalidades independentes que estendem um caso de uso base.
@@ -793,7 +825,7 @@ Diferentemente de sistemas com fluxos condicionais mais elaborados, o conjunto d
 \subsection{Diagrama de Classes}
 \label{sec:diagrama-classes}
 
-O diagrama de classes (Figura~\ref{fig:diagrama-classes}) representa as entidades de domínio do \textit{backend} (pacote \texttt{internal/domain}) e seus principais atributos e métodos, tal como definidos em Go e persistidos via GORM. As multiplicidades indicadas refletem as chaves estrangeiras (\texttt{tenant\_id}, \texttt{client\_id}, \texttt{user\_id}, \texttt{quote\_id}, \texttt{product\_id}) presentes nas estruturas reais do código.
+O diagrama de classes (Figura~\ref{fig:diagrama-classes}) representa as entidades de domínio do \textit{backend} (pacote \texttt{internal/\allowbreak{}domain}) e seus principais atributos e métodos, tal como definidos em Go e persistidos via GORM. As multiplicidades indicadas refletem as chaves estrangeiras (\texttt{tenant\_id}, \texttt{client\_id}, \texttt{user\_id}, \texttt{quote\_id}, \texttt{product\_id}) presentes nas estruturas reais do código.
 
 \begin{figure}[H]
   \centering
@@ -803,84 +835,82 @@ O diagrama de classes (Figura~\ref{fig:diagrama-classes}) representa as entidade
   \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   class/.style={
-    rectangle split, rectangle split parts=3, draw, align=left,
+    rectangle split, rectangle split parts=3, draw, align=left, anchor=north,
     font=\footnotesize, rectangle split part align={left,left,left},
     text width=3.4cm, inner sep=3pt
   },
-  every edge/.style={draw, -{Latex[length=2mm]}}
+  assoc/.style={draw, -{Latex[length=2mm]}},
+  card/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  junction/.style={circle, fill, inner sep=1.2pt}
 ]
+% Mesma grade do diagrama ER: colunas x = 0 / 5.5 / 11
+\def\ybus{-4.9}
 
-\node[class] (tenant) at (0,9) {
+\node[class] (tenant) at (5.5,0) {
   \textbf{Tenant}
   \nodepart{second} + id: UUID \\ + companyName \\ + cnpj \\ + plan \\ + status \\ + billingActive: bool
   \nodepart{third} + BeforeCreate()
 };
-
-\node[class] (user) at (7,9) {
-  \textbf{User}
-  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, email \\ + passwordHash \\ + role: UserRole \\ + status \\ + permissions: []string
-  \nodepart{third} + HasPermission() \\ + BeforeCreate()
-};
-
-\node[class] (client) at (0,4.2) {
-  \textbf{Client}
-  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, email, phone \\ + document \\ + documentType: CPF\textbar CNPJ \\ + address, city, state \\ + isActive: bool
-  \nodepart{third} + BeforeCreate()
-};
-
-\node[class] (product) at (7,4.2) {
-  \textbf{Product}
-  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, description \\ + price: float64 \\ + priceType \\ + stock: int \\ + sku, category \\ + imageURL \\ + isActive: bool
-  \nodepart{third} + BeforeCreate()
-};
-
-\node[class] (quote) at (0,-1.6) {
-  \textbf{Quote}
-  \nodepart{second} + id, tenantId: UUID \\ + clientId, userId: UUID \\ + subtotal, discount \\ + totalValue: float64 \\ + paymentMethod \\ + status: QuoteStatus \\ + workStatus: WorkStatus \\ + approvedAt: *time
-  \nodepart{third} + BeforeCreate() \\ + AfterFind()
-};
-
-\node[class] (quoteitem) at (7,-1.6) {
-  \textbf{QuoteItem}
-  \nodepart{second} + id, tenantId: UUID \\ + quoteId, productId: UUID \\ + widthCM, heightCM \\ + thickness, areaM2 \\ + unitPrice, quantity \\ + total: float64 \\ + edgeType \\ + hasCutout: bool
-  \nodepart{third} + BeforeCreate()
-};
-
-\node[class] (audit) at (0,-7) {
-  \textbf{Audit}
-  \nodepart{second} + id, tenantId: UUID \\ + userId: *UUID \\ + module: AuditModule \\ + action: AuditAction \\ + objectId, objectName \\ + method, path, ip \\ + statusCode: int
-  \nodepart{third} + BeforeCreate()
-};
-
-\node[class] (lead) at (7,-7) {
+\node[class] (lead) at (11,0) {
   \textbf{Lead (Waitlist)}
   \nodepart{second} + id: UUID \\ + name, whatsApp \\ + state \\ + companySize \\ + quotesAvg \\ + source
   \nodepart{third} + BeforeCreate()
 };
 
-% Relacionamentos
-\draw[-{Diamond[length=2mm]}] (user.west) -- ++(-1.0,0) |- (tenant.south);
-\draw (tenant) edge[bend left=8,  "1"] ["*"'] (client);
-\draw (tenant) edge[bend right=8, "1"] ["*"'] (product);
-\draw (tenant) edge[bend left=15, "1"] ["*"'] (quote);
-\draw (tenant) edge["1"] ["*"'] (audit);
-\draw (client) edge["1"] ["*"'] (quote);
-\draw (user)   edge[bend left=20, "1"] ["*"'] (quote);
-\draw (quote)  edge["1"] ["*"'] (quoteitem);
-\draw (product) edge[bend right=15, "1"] ["*"'] (quoteitem);
-\draw (user)   edge[bend right=20, "0..1"] ["*"'] (audit);
-
-\node[font=\scriptsize, align=left, anchor=north west] at (10.6,9) {
-  \textbf{Legenda}\\
-  losango\,=\,composição\\
-  seta\,=\,associação\\
-  1 / * = cardinalidade\\[4pt]
-  \textbf{Enums}\\
-  UserRole: admin, manager,\\employee\\
-  QuoteStatus: draft, pending,\\sent, approved, rejected,\\cancelled\\
-  AuditModule: auth, tenant,\\user, client, product, quote,\\settings, reports
+\node[class] (user) at (0,-6.2) {
+  \textbf{User}
+  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, email \\ + passwordHash \\ + role: UserRole \\ + status \\ + permissions: []string
+  \nodepart{third} + HasPermission() \\ + BeforeCreate()
+};
+\node[class] (client) at (5.5,-6.2) {
+  \textbf{Client}
+  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, email, phone \\ + document \\ + documentType: CPF\textbar CNPJ \\ + address, city, state \\ + isActive: bool
+  \nodepart{third} + BeforeCreate()
+};
+\node[class] (product) at (11,-6.2) {
+  \textbf{Product}
+  \nodepart{second} + id: UUID \\ + tenantId: UUID \\ + name, description \\ + price: float64 \\ + priceType \\ + stock: int \\ + sku, category \\ + imageURL \\ + isActive: bool
+  \nodepart{third} + BeforeCreate()
 };
 
+\node[class] (audit) at (0,-12.8) {
+  \textbf{Audit}
+  \nodepart{second} + id, tenantId: UUID \\ + userId: *UUID \\ + module: AuditModule \\ + action: AuditAction \\ + objectId, objectName \\ + method, path, ip \\ + statusCode: int
+  \nodepart{third} + BeforeCreate()
+};
+\node[class] (quote) at (5.5,-12.8) {
+  \textbf{Quote}
+  \nodepart{second} + id, tenantId: UUID \\ + clientId, userId: UUID \\ + subtotal, discount \\ + totalValue: float64 \\ + paymentMethod \\ + status: QuoteStatus \\ + workStatus: WorkStatus \\ + approvedAt: *time
+  \nodepart{third} + BeforeCreate() \\ + AfterFind()
+};
+\node[class] (quoteitem) at (11,-12.8) {
+  \textbf{QuoteItem}
+  \nodepart{second} + id, tenantId: UUID \\ + quoteId, productId: UUID \\ + widthCM, heightCM \\ + thickness, areaM2 \\ + unitPrice, quantity \\ + total: float64 \\ + edgeType \\ + hasCutout: bool
+  \nodepart{third} + BeforeCreate()
+};
+
+% Composição: Tenant (1) contém as demais entidades de negócio (*)
+\draw[{Diamond[length=2.6mm, width=2mm]}-] (tenant.south) -- node[card, right, pos=0.45] {1} (5.5,\ybus);
+\draw (-2.6,\ybus) -- (11,\ybus);
+\foreach \x in {-2.6,0,5.5,8.25,11} { \node[junction] at (\x,\ybus) {}; }
+\draw (0,\ybus)   -- node[card, right, pos=0.7] {*} (user.north);
+\draw (5.5,\ybus) -- node[card, right, pos=0.7] {*} (client.north);
+\draw (11,\ybus)  -- node[card, right, pos=0.7] {*} (product.north);
+\draw (-2.6,\ybus) |- node[card, above, pos=0.9] {*} (audit.west);
+\draw (8.25,\ybus) |- node[card, above, pos=0.85] {*} ($(quote.east)+(0,1.0)$);
+
+% Associações
+\draw[assoc] (user.south) -- node[card, right, pos=0.2] {0..1} node[card, right, pos=0.8] {*} (audit.north);
+\draw[assoc] (user.east) -- ++(0.95,0) node[card, above, pos=0.5] {1} |- node[card, above, pos=0.85] {*} (quote.west);
+\draw[assoc] (client.south) -- node[card, right, pos=0.2] {1} node[card, right, pos=0.8] {*} (quote.north);
+\draw[assoc] (product.south) -- node[card, right, pos=0.2] {1} node[card, right, pos=0.8] {*} (quoteitem.north);
+\draw[assoc] ($(quote.east)+(0,-0.6)$) -- node[card, above, pos=0.15] {1} node[card, above, pos=0.85] {*} ($(quote.east)+(0,-0.6)$ -| quoteitem.west);
+
+\node[font=\scriptsize, align=left, anchor=north west, text width=16cm] at (-2.6,-19.6) {
+  \textbf{Legenda:} losango = composição (a empresa contém seus registros); seta = associação; 1 / * / 0..1 = multiplicidade.\\
+  \textbf{Enumerações:} UserRole = admin, manager, employee; QuoteStatus = draft, pending, sent, approved, rejected, cancelled;\\
+  AuditModule = auth, tenant, user, client, product, quote, settings, reports.
+};
 \end{tikzpicture}
 }
 \end{figure}
@@ -892,9 +922,9 @@ O diagrama de classes (Figura~\ref{fig:diagrama-classes}) representa as entidade
 \subsection{Diagramas de Sequência}
 \label{sec:diagramas-sequencia}
 
-Foram elaborados três diagramas de sequência para os fluxos mais representativos do sistema: a autenticação de usuários (RF01), o envio de arquivos por URL assinada (RF09) -- este último detalhando especificamente o backend de armazenamento local adotado como padrão (Subseção~\ref{sec:armazenamento-imagens}) -- e a criação de um orçamento (RF06, RF07), o fluxo de negócio mais complexo do sistema.
+Foram elaborados três diagramas de sequência para os fluxos mais representativos do sistema: a autenticação de usuários (RF01), o envio de arquivos por URL assinada (RF09), detalhando o \textit{backend} de armazenamento local adotado como padrão (Seção~\ref{sec:armazenamento-imagens}), e a criação de um orçamento (RF06, RF07), o fluxo de negócio mais complexo do sistema.
 
-A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir da requisição do \textit{frontend}, passando pelo caso de uso de autenticação, pela consulta ao repositório de usuários no PostgreSQL, pela verificação de senha com bcrypt e pela emissão dos tokens JWT.
+A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir da requisição do \textit{frontend}, passando pelo caso de uso de autenticação, pela consulta ao repositório de usuários no PostgreSQL, pela verificação de senha com bcrypt e pela emissão dos \textit{tokens} JWT.
 
 \begin{figure}[H]
   \centering
@@ -911,7 +941,7 @@ A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir 
 ]
 
 \def\ytop{0}
-\def\ybot{-13.5}
+\def\ybot{-14.0}
 
 % Participantes
 \node[actorbox] (fe)  at (0,\ytop)   {Frontend\\(Dashboard)};
@@ -928,20 +958,20 @@ A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir 
 \draw[msg] ($(fe.south)+(0,-1)$) -- node[above,align=center,font=\scriptsize]{POST /api/v1/auth/login\\\{email, password\}} ($(mw.south)+(0,-1)$);
 \draw[msg] ($(mw.south)+(0,-2.1)$) -- node[above,font=\scriptsize]{Login(ctx, req)} ($(uc.south)+(0,-2.1)$);
 \draw[msg] ($(uc.south)+(0,-3.2)$) -- node[above,font=\scriptsize]{GetByEmail(email)} ($(rep.south)+(0,-3.2)$);
-\draw[msg] ($(rep.south)+(0,-4.3)$) -- node[above,font=\scriptsize]{SELECT * FROM users WHERE email=\$1} ($(db.south)+(0,-4.3)$);
+\draw[msg] ($(rep.south)+(0,-4.3)$) -- node[above,align=center,font=\scriptsize]{SELECT * FROM users\\WHERE email = \$1} ($(db.south)+(0,-4.3)$);
 \draw[ret]  ($(db.south)+(0,-5.4)$) -- node[above,font=\scriptsize]{linha do usuário} ($(rep.south)+(0,-5.4)$);
 \draw[ret]  ($(rep.south)+(0,-6.3)$) -- node[above,font=\scriptsize]{User} ($(uc.south)+(0,-6.3)$);
 
-\node[font=\scriptsize, align=left] at (8.4,-7.1) {[uc] ensureUserCanAuthenticate(user)\\{}[uc] hasher.CheckPassword(pwd, hash) -- bcrypt};
+\node[font=\scriptsize, align=left, anchor=west, fill=white, draw=black!40] at (8.6,-7.5) {ensureUserCanAuthenticate(user)\\hasher.CheckPassword(pwd, hash): bcrypt};
 
-\node[font=\scriptsize, align=left] at (8.4,-8.4) {[uc] jwtManager: gera accessToken + refreshToken\\\phantom{[uc]} (claims: user\_id, tenant\_id, email, role, permissions)};
+\node[font=\scriptsize, align=left, anchor=west, fill=white, draw=black!40] at (8.6,-8.95) {jwtManager: gera accessToken + refreshToken\\(claims: user\_id, tenant\_id, email,\\role, permissions)};
 
-\draw[ret] ($(uc.south)+(0,-9.6)$) -- node[above,font=\scriptsize]{AuthResponse (tokens, user)} ($(mw.south)+(0,-9.6)$);
-\draw[ret] ($(mw.south)+(0,-10.7)$) -- node[above,align=center,font=\scriptsize]{200 OK\\\{access\_token, refresh\_token, user\}} ($(fe.south)+(0,-10.7)$);
+\draw[ret] ($(uc.south)+(0,-10.2)$) -- node[above,font=\scriptsize]{AuthResponse (tokens, user)} ($(mw.south)+(0,-10.2)$);
+\draw[ret] ($(mw.south)+(0,-11.3)$) -- node[above,align=center,font=\scriptsize]{200 OK\\\{access\_token, refresh\_token, user\}} ($(fe.south)+(0,-11.3)$);
 
-\node[font=\scriptsize, align=left] at (0,-11.8) {[fe] persiste tokens e\\ tenant\_id (localStorage)};
+\node[font=\scriptsize, align=left, anchor=west, fill=white, draw=black!40] at (0.2,-12.3) {persiste tokens e\\tenant\_id (localStorage)};
 
-\draw[msg] ($(fe.south)+(0,-12.6)$) -- node[above,align=center,font=\scriptsize]{requisições seguintes:\\Authorization: Bearer <access\_token>} ($(mw.south)+(0,-12.6)$);
+\draw[msg] ($(fe.south)+(0,-13.3)$) -- node[above,align=center,font=\scriptsize]{requisições seguintes:\\Authorization: Bearer <access\_token>} ($(mw.south)+(0,-13.3)$);
 
 \end{tikzpicture}
 }
@@ -949,7 +979,7 @@ A Figura~\ref{fig:sequencia-login} descreve o fluxo de \textit{login}: a partir 
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-A Figura~\ref{fig:sequencia-upload} descreve o fluxo de envio de imagem usando o backend local: o \textit{frontend} solicita uma URL assinada ao \textit{endpoint} \texttt{/uploads/sign}, recebe uma URL de PUT contendo um \textit{token} HMAC-SHA256 com expiração e realiza o envio direto do arquivo para o \textit{endpoint} \texttt{/uploads/local/*}, que valida o \textit{token} antes de gravar o arquivo em disco.
+A Figura~\ref{fig:sequencia-upload} descreve o fluxo de envio de imagem usando o backend local: o \textit{frontend} solicita uma URL assinada ao \textit{endpoint} \texttt{/\allowbreak{}uploads/\allowbreak{}sign}, recebe uma URL de PUT contendo um \textit{token} HMAC-SHA256 com expiração e realiza o envio direto do arquivo para o \textit{endpoint} \texttt{/\allowbreak{}uploads/\allowbreak{}local/\allowbreak{}*}, que valida o \textit{token} antes de gravar o arquivo em disco.
 
 \begin{figure}[H]
   \centering
@@ -1143,7 +1173,7 @@ O diagrama de atividades documenta o fluxo de estados de um orçamento (UC05) ao
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-O fluxo principal segue da esquerda para a direita em quatro estágios: (1) elaboração, em que o orçamento é criado como rascunho e recebe seus itens; (2) submissão, em que o orçamento passa a pendente e é enviado ao cliente; (3) decisão comercial, em que o cliente aprova ou rejeita a proposta; e (4) execução, restrita aos orçamentos aprovados, em que o sistema inicializa automaticamente o andamento da obra como ``não iniciado'' -- caso ainda não tenha sido definido -- e o acompanha até a conclusão. O fluxo de cancelamento, representado pela linha tracejada, pode ocorrer a partir do momento em que o orçamento é submetido, refletindo o comportamento real da API, que aceita a transição para \texttt{cancelled} a partir de qualquer status não finalizado.
+O fluxo principal segue da esquerda para a direita em quatro estágios: (1) elaboração, em que o orçamento é criado como rascunho e recebe seus itens; (2) submissão, em que o orçamento passa a pendente e é enviado ao cliente; (3) decisão comercial, em que o cliente aprova ou rejeita a proposta; e (4) execução, restrita aos orçamentos aprovados, em que o sistema inicializa automaticamente o andamento da obra como ``não iniciado'', caso ainda não tenha sido definido, e o acompanha até a conclusão. O fluxo de cancelamento, representado pela linha tracejada, pode ocorrer a partir do momento em que o orçamento é submetido, refletindo o comportamento real da API, que aceita a transição para \texttt{cancelled} a partir de qualquer status não finalizado.
 
 \section{Etapas do Desenvolvimento}
 O desenvolvimento do sistema ERP para marmorarias foi estruturado em etapas progressivas, iniciando pelo planejamento inicial e avançando pela definição da arquitetura, implementação das funcionalidades e validação do protótipo. A abordagem priorizou modularidade, escalabilidade e segurança, permitindo que o sistema evoluísse de forma consistente ao longo do projeto.
@@ -1151,57 +1181,117 @@ O desenvolvimento do sistema ERP para marmorarias foi estruturado em etapas prog
 \subsection{Planejamento Inicial}
 A etapa de planejamento inicial teve como foco a definição dos objetivos gerais do sistema, a identificação das necessidades operacionais das marmorarias e o levantamento das funcionalidades essenciais para compor a primeira versão do ERP. Nesta fase, foi formulado um MVP, delimitando recursos prioritários como: cadastro multi-\textit{tenant} da empresa, autenticação, gestão de clientes, catálogo de produtos, orçamentos (com status comercial e de obra), configurações da empresa, painel com indicadores e \textit{upload} de imagens.
 
-Além da definição de requisitos, o planejamento envolveu a escolha das tecnologias e o mapeamento dos fluxos de interação do usuário --- login, \textit{provision} da marmoraria, criação de clientes/produtos/orçamentos e atualização de status. Também foram levantados problemas típicos do setor, como fragmentação de informações e baixa previsibilidade de orçamentos, que orientaram o desenho do painel e dos módulos principais.
+Além da definição de requisitos, o planejamento envolveu a escolha das tecnologias e o mapeamento dos fluxos de interação do usuário: \textit{login}, cadastro (\textit{provision}) da marmoraria, criação de clientes, produtos e orçamentos e atualização de status. Também foram levantados problemas típicos do setor, como fragmentação de informações e baixa previsibilidade de orçamentos, que orientaram o desenho do painel e dos módulos principais.
 
 \subsection{Estruturação da Arquitetura}
 A fase de estruturação da arquitetura concentrou-se na organização interna do sistema, incluindo camadas, módulos, estratégias de comunicação e padrões de desenvolvimento. Adotou-se um monólito modular inspirado na \textit{Clean Architecture}, com separação entre domínio, casos de uso, entrega HTTP e infraestrutura.
 
-O backend foi organizado em módulos responsáveis por autenticação, \textit{tenants}, usuários, clientes, produtos, orçamentos, configurações, auditoria, \textit{uploads} e lista de espera (\textit{waitlist}) da landing page. A comunicação com o frontend ocorre por API REST sob o prefixo \texttt{/api/v1}. No frontend, o Next.js (App Router) organiza rotas, componentes e serviços de consumo da API. Na camada de dados, o PostgreSQL e o GORM sustentam o modelo relacional. Versionamento, Docker e pipeline de CI/CD fecham o ciclo de entrega.
+O \textit{backend} foi organizado em módulos responsáveis por autenticação, \textit{tenants}, usuários, clientes, produtos, orçamentos, configurações, auditoria, \textit{uploads} e lista de espera (\textit{waitlist}) da página institucional. A comunicação com o \textit{frontend} ocorre por API REST sob o prefixo \texttt{/\allowbreak{}api/\allowbreak{}v1}. No \textit{frontend}, o Next.js (\textit{App Router}) organiza rotas, componentes e serviços de consumo da API. Na camada de dados, o PostgreSQL e o GORM sustentam o modelo relacional. Versionamento, Docker e \textit{pipeline} de CI/CD fecham o ciclo de entrega.
 
-\subsection{Desenvolvimento do Backend}
+\subsection{Desenvolvimento do \textit{Backend}}
+\label{sec:desenvolvimento-backend}
 
-A construção do \textit{backend} teve início com a definição das entidades de domínio que representam o núcleo do sistema de gestão para marmorarias, entre elas: \textit{tenant} (empresa), usuário, cliente, produto, orçamento, configurações, leads da lista de espera e registros de auditoria. A API foi desenvolvida na linguagem Go, utilizando o \textit{framework} Gin para o tratamento de requisições HTTP e o GORM como ORM (\textit{Object-Relational Mapping}) para persistência no banco de dados relacional PostgreSQL.
+A construção do \textit{backend} teve início com a definição das entidades de domínio que representam o núcleo do sistema de gestão para marmorarias, entre elas: \textit{tenant} (empresa), usuário, cliente, produto, orçamento, configurações, contatos da lista de espera e registros de auditoria. A API foi desenvolvida na linguagem Go, utilizando o \textit{framework} Gin para o tratamento de requisições HTTP e o GORM como ORM para gravação e leitura no banco de dados relacional PostgreSQL.
 
-A organização do código seguiu uma arquitetura em camadas inspirada na \textit{Clean Architecture}, com separação entre domínio (\texttt{domain}), casos de uso (\texttt{usecase}), entrega HTTP (\texttt{delivery/http}) e infraestrutura (\texttt{infra}). Essa divisão permite isolar as regras de negócio das dependências externas, facilitando manutenção, testes e evolução do sistema.
+O acesso ao banco foi feito por meio do GORM, e não por comandos SQL escritos manualmente. Cada tabela corresponde a uma \textit{struct} do pacote \texttt{internal/\allowbreak{}domain} (por exemplo, \texttt{Client} corresponde à tabela \texttt{clients}), e anotações nos campos (\textit{struct tags}) informam ao GORM o tipo de cada coluna, a chave primária, os índices únicos e os valores padrão. O GORM foi usado em quatro frentes:
 
-A autenticação foi implementada com base em JWT (\textit{JSON Web Token}), por meio da biblioteca \texttt{golang-jwt}. Após a validação das credenciais, a API emite um par de tokens (\textit{access token} e \textit{refresh token}), contendo \textit{claims} como identificador do usuário, identificador do \textit{tenant}, e-mail, papel (\textit{role}) e permissões. As senhas são armazenadas com hash bcrypt. O fluxo de cadastro de novas empresas ocorre pelo \textit{endpoint} público de \textit{provision}, que cria, em uma única operação, o \textit{tenant}, o usuário administrador e as configurações iniciais da empresa.
+\begin{itemize}
+\item \textbf{Criação das tabelas:} na inicialização da API, a função \texttt{AutoMigrate} compara as \textit{structs} com o banco e cria as tabelas e colunas que ainda não existem.
+\item \textbf{Consultas:} os repositórios (pacote \texttt{internal/\allowbreak{}infra/\allowbreak{}repository}) montam as consultas com métodos do GORM, como:
 
-Como se trata de uma aplicação \textit{multi-tenant}, cada recurso de negócio é isolado pelo \texttt{tenant\_id} presente no token. \textit{Middlewares} de autenticação, autorização por papel/permissão e auditoria protegem as rotas autenticadas, registrando operações de criação, atualização e exclusão para rastreabilidade.
+\begin{center}
+\small\texttt{Where("id = ? AND tenant\_id = ?", id, tenantID).First(\&client)}
+\end{center}
 
-Foram implementados \textit{endpoints} sob o prefixo \texttt{/api/v1}, organizados por módulo de domínio, conforme sintetizado na Tabela~\ref{tab:endpoints-api}.
+O GORM traduz essa chamada para SQL e passa os valores como parâmetros, e não concatenados ao texto do comando, o que protege contra injeção de SQL.
+\item \textbf{Ganchos (\textit{hooks}):} métodos como \texttt{BeforeCreate}, presentes no diagrama de classes (Figura~\ref{fig:diagrama-classes}), são chamados automaticamente pelo GORM antes de gravar um registro e foram usados para gerar o identificador (UUID) e preencher valores padrão, como o papel \textit{employee} de um novo usuário.
+\item \textbf{Exclusão lógica:} as entidades possuem o campo \texttt{DeletedAt} do tipo \texttt{gorm.DeletedAt}. Com ele, uma chamada de exclusão apenas preenche a data de exclusão, e todas as consultas seguintes ignoram automaticamente os registros excluídos (RNF10).
+\end{itemize}
+
+Operações que precisam gravar várias tabelas de uma vez, como a atualização de configurações da empresa, são executadas dentro de uma transação do banco (\texttt{Transaction}), garantindo que todas as gravações aconteçam ou nenhuma aconteça.
+
+A organização do código seguiu uma arquitetura em camadas inspirada na \textit{Clean Architecture}, com separação entre domínio (\texttt{domain}), casos de uso (\texttt{usecase}), entrega HTTP (\texttt{delivery/\allowbreak{}http}) e infraestrutura (\texttt{infra}). Essa divisão permite isolar as regras de negócio das dependências externas, facilitando manutenção, testes e evolução do sistema.
+
+A autenticação foi implementada com JWT, por meio da biblioteca \texttt{golang-jwt}. Após a validação das credenciais, a API emite um par de \textit{tokens} (\textit{access token} e \textit{refresh token}), contendo as informações (\textit{claims}) de identificador do usuário, identificador do \textit{tenant}, e-mail, papel (\textit{role}) e permissões. As senhas são armazenadas com \textit{hash} bcrypt. O fluxo de cadastro de novas empresas ocorre pelo \textit{endpoint} público de \textit{provision}, que cria, em uma única operação, o \textit{tenant}, o usuário administrador e as configurações iniciais da empresa.
+
+Como se trata de uma aplicação \textit{multi-tenant}, cada recurso de negócio é isolado pelo \texttt{tenant\_id} presente no \textit{token}. \textit{Middlewares} de autenticação, autorização por papel e permissão e auditoria protegem as rotas autenticadas, registrando operações de criação, atualização e exclusão para rastreabilidade. As regras de controle de acesso são detalhadas na Seção~\ref{sec:controle-acesso}.
+
+\subsubsection{Controle de Acesso}
+\label{sec:controle-acesso}
+
+O controle de acesso responde a duas perguntas a cada requisição: \emph{quem} está pedindo e \emph{o que} essa pessoa pode fazer. A primeira é respondida pela autenticação (\textit{login} e JWT); a segunda, pela autorização, baseada em papéis e permissões.
+
+Cada usuário pertence a uma única empresa (\textit{tenant}) e possui um papel (\textit{role}): \textit{admin} (administrador da marmoraria), \textit{manager} (gerente) ou \textit{employee} (colaborador). Cada papel recebe, ao ser criado, um conjunto padrão de permissões, apresentado na Tabela~\ref{tab:permissoes-papel}. As permissões seguem o formato \texttt{recurso:ação} (por exemplo, \texttt{clients:create} permite cadastrar clientes) e ficam gravadas no próprio usuário, de modo que o administrador pode conceder ou retirar permissões individualmente.
+
+\begin{table}[H]
+  \centering
+  \caption{Permissões padrão por papel.}
+  \label{tab:permissoes-papel}
+  \small
+  \begin{tabular}{p{3.2cm}p{3.4cm}p{3.4cm}p{3.4cm}}
+    \hline
+    \textbf{Recurso} & \textbf{\textit{admin}} & \textbf{\textit{manager}} & \textbf{\textit{employee}} \\
+    \hline
+    Clientes & criar, ler, alterar, excluir & criar, ler, alterar & ler \\
+    Produtos & criar, ler, alterar, excluir & criar, ler, alterar & ler \\
+    Orçamentos & criar, ler, alterar, excluir, mudar status & criar, ler, alterar, mudar status & criar, ler, alterar \\
+    Usuários & criar, ler, alterar, excluir & ler & nenhuma \\
+    Configurações & ler, alterar & ler & nenhuma \\
+    Relatórios & exportar & exportar & nenhuma \\
+    \hline
+  \end{tabular}
+  \begin{minipage}{0.95\textwidth}
+    \vspace{0.3em}
+    {\small Fonte: O Autor, 2026, a partir da função \texttt{DefaultPermissions} do código da API.}
+  \end{minipage}
+\end{table}
+
+A validação dessas regras é feita sempre no \textit{backend}, em quatro etapas, para toda requisição a uma rota protegida:
+
+\begin{enumerate}
+\item \textbf{Autenticação do \textit{token}:} o \textit{middleware} \texttt{Authenticate} lê o cabeçalho \texttt{Authorization}, confere a assinatura e a validade do JWT e, se estiverem corretas, extrai o identificador do usuário, o \texttt{tenant\_id}, o papel e as permissões. Um \textit{token} ausente, adulterado ou expirado resulta em HTTP 401, e o painel tenta renovar a sessão com o \textit{refresh token}.
+\item \textbf{Autorização da rota:} cada rota declara o que exige. Rotas administrativas usam o \textit{middleware} \texttt{RequireRole("admin")} (por exemplo, gestão de usuários e consulta de auditoria); as demais usam \texttt{RequirePermission}, com a permissão correspondente (por exemplo, \texttt{DELETE /\allowbreak{}clients/\allowbreak{}:id} exige \texttt{clients:delete}). Se o usuário não tiver o papel ou a permissão, a API responde HTTP 403 e a operação não é executada. O papel \textit{admin} tem acesso a todas as permissões da própria empresa.
+\item \textbf{Isolamento por empresa:} o \texttt{tenant\_id} usado nas operações vem sempre do \textit{token}, que é assinado pela API e não pode ser alterado pelo usuário, e nunca de um valor livre enviado pelo navegador. Quando o corpo da requisição traz um \texttt{tenant\_id}, a API confere se ele é igual ao do \textit{token} e recusa a requisição caso contrário.
+\item \textbf{Filtro no banco de dados:} todas as consultas dos repositórios incluem a condição \texttt{tenant\_id = ?}. Assim, mesmo que um usuário tente acessar o identificador de um registro de outra empresa, a consulta não o encontra, e a API responde como se o registro não existisse (HTTP 404).
+\end{enumerate}
+
+No painel, os itens de menu e os botões são exibidos de acordo com as permissões do usuário, mas isso serve apenas para conforto de uso: a segurança não depende do \textit{frontend}, porque a API repete todas as verificações acima. Como as permissões viajam dentro do JWT, uma alteração de permissões feita pelo administrador passa a valer quando o usuário recebe um novo \textit{token}, isto é, no próximo \textit{login} ou na próxima renovação da sessão.
+
+Foram implementados \textit{endpoints} sob o prefixo \texttt{/\allowbreak{}api/\allowbreak{}v1}, organizados por módulo de domínio, conforme sintetizado na Tabela~\ref{tab:endpoints-api}.
 
 \begin{table}[H]
   \centering
   \caption{Principais grupos de \textit{endpoints} da API, por módulo.}
   \label{tab:endpoints-api}
-  \begin{tabular}{p{2.6cm}p{7.4cm}p{4cm}}
+  \small
+  \begin{tabular}{p{2.5cm}p{6.6cm}p{4.6cm}}
     \hline
     \textbf{Módulo} & \textbf{Rotas principais} & \textbf{Autenticação} \\
     \hline
-    Autenticação & \texttt{/auth/login}, \texttt{/auth/refresh}, \texttt{/auth/provision}, \texttt{/auth/verify-email} & Pública \\
-    Usuários & \texttt{/users/profile} (GET/PUT); CRUD \texttt{/users} & JWT; CRUD restrito a \textit{admin} \\
-    \textit{Tenants} & CRUD \texttt{/tenants} & JWT + papel \textit{admin} \\
-    Clientes & CRUD \texttt{/clients} & JWT + permissão \\
-    Produtos & CRUD \texttt{/products} & JWT + permissão \\
-    Orçamentos & CRUD \texttt{/quotes}, \texttt{/quotes/:id/status}, \texttt{/quotes/:id/work-status} & JWT + permissão \\
-    Configurações & \texttt{/settings} (GET/PUT) & JWT + permissão \\
-    Ideário (\textit{roadmap}) & \texttt{/roadmap} (GET/POST), \texttt{/roadmap/suggestions} & JWT; mutações restritas a \textit{admin} \\
-    Auditoria & \texttt{/audits} (GET) & JWT + papel \textit{admin} \\
-    \textit{Uploads} & \texttt{/uploads/sign}, \texttt{/uploads/read-url}, \texttt{/uploads/local/*} & JWT (assinatura); URL assinada (escrita/leitura) \\
-    Relatórios & \texttt{/reports/export} (GET) & JWT + permissão \\
-    Lista de espera & \texttt{/waitlist} (POST) & Pública \\
-    \textit{Healthchecks} & \texttt{/health}, \texttt{/liveness}, \texttt{/readiness} & Pública \\
+    Autenticação & \texttt{/\allowbreak{}auth/\allowbreak{}login}, \texttt{/\allowbreak{}auth/\allowbreak{}refresh}, \texttt{/\allowbreak{}auth/\allowbreak{}provision}, \texttt{/\allowbreak{}auth/\allowbreak{}verify-email} & Pública \\
+    Usuários & \texttt{/\allowbreak{}users/\allowbreak{}profile} (GET/PUT); CRUD \texttt{/\allowbreak{}users} & JWT; CRUD restrito a \textit{admin} \\
+    \textit{Tenants} & CRUD \texttt{/\allowbreak{}tenants} & JWT + papel \textit{admin} \\
+    Clientes & CRUD \texttt{/\allowbreak{}clients} & JWT + permissão \texttt{clients:*} \\
+    Produtos & CRUD \texttt{/\allowbreak{}products} & JWT + permissão \texttt{products:*} \\
+    Orçamentos & CRUD \texttt{/\allowbreak{}quotes}, \texttt{/\allowbreak{}quotes/\allowbreak{}:id/\allowbreak{}status}, \texttt{/\allowbreak{}quotes/\allowbreak{}:id/\allowbreak{}work-status} & JWT + permissão \texttt{quotes:*} \\
+    Configurações & \texttt{/\allowbreak{}settings} (GET/PUT) & JWT + permissão \texttt{settings:*} \\
+    Ideário (\textit{roadmap}) & \texttt{/\allowbreak{}roadmap} (GET/POST), \texttt{/\allowbreak{}roadmap/\allowbreak{}suggestions} & JWT; mutações restritas a \textit{admin} \\
+    Auditoria & \texttt{/\allowbreak{}audits} (GET) & JWT + papel \textit{admin} \\
+    \textit{Uploads} & \texttt{/\allowbreak{}uploads/\allowbreak{}sign}, \texttt{/\allowbreak{}uploads/\allowbreak{}read-url}, \texttt{/\allowbreak{}uploads/\allowbreak{}local/\allowbreak{}*} & JWT (assinatura); URL assinada (escrita/leitura) \\
+    Relatórios & \texttt{/\allowbreak{}reports/\allowbreak{}export} (GET) & JWT + permissão \texttt{reports:export} \\
+    Lista de espera & \texttt{/\allowbreak{}waitlist} (POST) & Pública \\
+    \textit{Healthchecks} & \texttt{/\allowbreak{}health}, \texttt{/\allowbreak{}liveness}, \texttt{/\allowbreak{}readiness} & Pública \\
     \hline
   \end{tabular}
   \begin{minipage}{0.95\textwidth}
     \vspace{0.3em}
-    {\small Fonte: O Autor, 2026.}
+    {\small Fonte: O Autor, 2026. A notação \texttt{clients:*} indica a permissão correspondente à ação (por exemplo, \texttt{clients:read} para listar e \texttt{clients:create} para cadastrar), conforme a Seção~\ref{sec:controle-acesso}.}
   \end{minipage}
 \end{table}
 
-O armazenamento de mídias foi implementado por trás de uma interface (\texttt{Signer}) com duas implementações intercambiáveis: um backend em disco local, selecionado por padrão, e um backend para o Google Cloud Storage (GCS), habilitado automaticamente quando a variável \texttt{GCS\_BUCKET} é configurada. Ambos seguem o mesmo contrato de \textit{signed URLs} de escrita e leitura, de modo que o restante da aplicação -- e o próprio \textit{frontend} -- não precisa saber qual backend está ativo. O backend local foi adotado como padrão deste trabalho por eliminar a dependência de uma conta de nuvem ativa e qualquer custo operacional durante a avaliação acadêmica, sem abrir mão do mesmo modelo de segurança: o \textit{token} de \textit{upload} é assinado com HMAC-SHA256 e expira em poucos minutos, e o arquivo nunca trafega pelo processo da API além da escrita em disco. Optou-se por manter o próprio GCS como o backend de nuvem já implementado (em vez de substituí-lo por outro serviço) porque o contrato de \textit{signed URLs} já validado neste trabalho é o mesmo adotado por serviços \textit{S3-compatible} de baixo custo, como o Cloudflare R2, tornando essa também uma alternativa viável de baixo custo caso a operação em nuvem seja retomada.
+O armazenamento de mídias foi implementado por trás de uma interface (\texttt{Signer}) com duas implementações intercambiáveis: um \textit{backend} em disco local, selecionado por padrão, e um \textit{backend} para o \textit{Google Cloud Storage} (GCS), habilitado automaticamente quando a variável \texttt{GCS\_BUCKET} é configurada. Ambos seguem o mesmo contrato de \textit{signed URLs} de escrita e leitura, de modo que o restante da aplicação, inclusive o \textit{frontend}, não precisa saber qual \textit{backend} está ativo. O \textit{backend} local foi adotado como padrão deste trabalho por eliminar a dependência de uma conta de nuvem ativa e qualquer custo operacional durante a avaliação acadêmica, sem abrir mão do mesmo modelo de segurança: o \textit{token} de \textit{upload} é assinado com HMAC-SHA256 e expira em poucos minutos, e o arquivo nunca trafega pelo processo da API além da escrita em disco. Optou-se por manter o próprio GCS como o \textit{backend} de nuvem já implementado (em vez de substituí-lo por outro serviço) porque o contrato de \textit{signed URLs} já validado neste trabalho é o mesmo adotado por serviços compatíveis com o Amazon S3 de baixo custo, como o Cloudflare R2, tornando essa também uma alternativa viável de baixo custo caso a operação em nuvem seja retomada.
 
-Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o cliente autenticado solicita uma URL de \textit{upload} ao \textit{endpoint} \texttt{/uploads/sign}; a API gera a chave do objeto e devolve uma URL assinada de PUT apontando para o backend ativo; o \textit{frontend} realiza o envio direto a essa URL (ao próprio servidor da API, no backend local, ou ao \textit{bucket}, no backend de nuvem); posteriormente, a aplicação persiste apenas a referência (\texttt{object\_key}) e solicita URLs de leitura quando necessário. Com essa abordagem, a arquitetura permanece leve, segura e escalável no tratamento de conteúdos multimídia, independentemente do backend de armazenamento selecionado.
+Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o cliente autenticado solicita uma URL de \textit{upload} ao \textit{endpoint} \texttt{/\allowbreak{}uploads/\allowbreak{}sign}; a API gera a chave do objeto e devolve uma URL assinada de PUT apontando para o \textit{backend} ativo; o \textit{frontend} realiza o envio direto a essa URL (ao próprio servidor da API, no \textit{backend} local, ou ao \textit{bucket}, no \textit{backend} de nuvem); posteriormente, a aplicação persiste apenas a referência (\texttt{object\_key}) e solicita URLs de leitura quando necessário. Com essa abordagem, a arquitetura permanece leve, segura e escalável no tratamento de conteúdos multimídia, independentemente do \textit{backend} de armazenamento selecionado.
  
 \begin{figure}[H]
   \centering
@@ -1213,13 +1303,13 @@ Quando um arquivo precisa ser enviado, o fluxo ocorre da seguinte forma: o clien
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-\subsection{Desenvolvimento do Frontend}
+\subsection{Desenvolvimento do \textit{Frontend}}
 
 O desenvolvimento da interface web priorizou usabilidade, responsividade e compatibilidade entre navegadores, permitindo que o usuário gerencie a operação da marmoraria a partir de um painel administrativo. A aplicação foi construída com Next.js, utilizando o App Router baseado em sistema de arquivos. Essa abordagem simplifica a organização das rotas, facilita a navegação entre páginas e favorece a leitura do código, acelerando o ciclo de desenvolvimento.
 
-A tipagem estática com TypeScript e a estilização com Tailwind CSS contribuíram para um código mais seguro e consistente, além de uma interface adaptável a diferentes resoluções de tela. A comunicação com a API REST foi implementada por meio da biblioteca Axios, com interceptores responsáveis por anexar o token JWT às requisições e renovar a sessão de forma silenciosa quando o \textit{access token} expira. Os tokens são persistidos no navegador e utilizados para manter o usuário autenticado entre recarregamentos da página.
+A tipagem estática com TypeScript e a estilização com Tailwind CSS contribuíram para um código mais seguro e consistente, além de uma interface adaptável a diferentes resoluções de tela. A comunicação com a API REST foi implementada por meio da biblioteca Axios, com interceptores responsáveis por anexar o \textit{token} JWT às requisições e renovar a sessão de forma silenciosa quando o \textit{access token} expira. Os \textit{tokens} são persistidos no navegador e utilizados para manter o usuário autenticado entre recarregamentos da página.
 
-As principais funcionalidades implementadas no \textit{frontend} incluem: autenticação (\textit{login} e cadastro/\textit{provision} da empresa), painel inicial com indicadores e gráficos (agregados no navegador a partir das listas da API), gestão de clientes, produtos e orçamentos, edição de perfil, configurações da empresa (dados cadastrais e logo) e controle de acesso por papel/permissão. Componentes reutilizáveis --- formulários, tabelas, \textit{modals}, campos de \textit{upload} e layout do painel --- foram adotados para reduzir duplicação e padronizar a experiência do usuário.
+As principais funcionalidades implementadas no \textit{frontend} incluem: autenticação (\textit{login} e cadastro/\textit{provision} da empresa), painel inicial com indicadores e gráficos (agregados no navegador a partir das listas da API), gestão de clientes, produtos e orçamentos, edição de perfil, configurações da empresa (dados cadastrais e logo) e controle de acesso por papel/permissão. Componentes reutilizáveis (formulários, tabelas, \textit{modals}, campos de \textit{upload} e o \textit{layout} do painel) foram adotados para reduzir duplicação e padronizar a experiência do usuário.
 
 O fluxo de navegação da aplicação é apresentado na Figura~\ref{fig:estrutura-navegacao-app-router}. Após o acesso inicial, o usuário realiza autenticação; em seguida, é direcionado ao \textit{dashboard}, de onde pode navegar para os módulos de clientes, produtos, orçamentos e configurações.
  
@@ -1234,8 +1324,9 @@ O fluxo de navegação da aplicação é apresentado na Figura~\ref{fig:estrutur
 \vspace{0.8em}
 
 \subsection{Integração entre Camadas}
+\label{sec:integracao-camadas}
 
-A integração entre o \textit{frontend} e o \textit{backend} foi realizada de forma progressiva, permitindo validar funcionalidades essenciais como autenticação (\textit{login}), cadastro de empresa (\textit{provision}), gestão de clientes, produtos e orçamentos, além das configurações da empresa. A comunicação ocorre por meio de requisições HTTP enviadas pelo painel web à API REST, utilizando tokens JWT para autenticação e autorização. No \textit{frontend}, a biblioteca Axios é responsável por essas requisições; por meio de \textit{interceptors}, o token de acesso é anexado automaticamente ao cabeçalho \texttt{Authorization} e, em caso de expiração (resposta HTTP 401), a sessão é renovada de forma silenciosa com o \textit{refresh token}, centralizando também o tratamento de erros.
+A integração entre o \textit{frontend} e o \textit{backend} foi realizada de forma progressiva, permitindo validar funcionalidades essenciais como autenticação (\textit{login}), cadastro de empresa (\textit{provision}), gestão de clientes, produtos e orçamentos, além das configurações da empresa. A comunicação ocorre por meio de requisições HTTP enviadas pelo painel web à API REST, utilizando \textit{tokens} JWT para autenticação e autorização. No \textit{frontend}, a biblioteca Axios é responsável por essas requisições; por meio de \textit{interceptors}, o \textit{token} de acesso é anexado automaticamente ao cabeçalho \texttt{Authorization} e, em caso de expiração (resposta HTTP 401), a sessão é renovada de forma silenciosa com o \textit{refresh token}, centralizando também o tratamento de erros.
 
 A Figura~\ref{fig:fluxo-cliente-servidor} ilustra o fluxo de comunicação entre cliente e servidor. O cliente envia uma requisição HTTP contendo o cabeçalho JWT; o servidor processa a solicitação e devolve uma resposta HTTP com \textit{payload} em JSON.
 
@@ -1249,27 +1340,27 @@ A Figura~\ref{fig:fluxo-cliente-servidor} ilustra o fluxo de comunicação entre
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao backend de armazenamento ativo (local por padrão, ou ao \textit{bucket} de nuvem quando configurado) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL de leitura. Essa estratégia reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário, sem que o \textit{frontend} precise conhecer qual backend está ativo.
+No que se refere a arquivos (logo da empresa e imagens de produtos), o \textit{frontend} e o \textit{backend} atuam de forma coordenada: o painel solicita à API uma URL assinada de \textit{upload}, envia o arquivo diretamente ao \textit{backend} de armazenamento ativo (local por padrão, ou ao \textit{bucket} de nuvem quando configurado) e, em seguida, persiste apenas a referência do objeto (\texttt{object\_key}) nos dados da aplicação. Para exibição, o cliente solicita uma URL de leitura. Essa estratégia reduz a carga sobre a API e garante consistência entre os dados cadastrais e os arquivos multimídia apresentados ao usuário, sem que o \textit{frontend} precise conhecer qual \textit{backend} está ativo.
 
 \subsection{Estratégia de Tratamento de Erros}
 \label{sec:estrategia-erros}
 
-Diferentemente da descrição de incidentes concretos apresentada no Capítulo~\ref{cap4Resultados}, esta subseção documenta a arquitetura de tratamento de erros definida em projeto, isto é, o mecanismo pelo qual erros são detectados, padronizados e comunicados ao usuário, independentemente de qual falha específica os aciona.
+Diferentemente da descrição de falhas concretas apresentada no Capítulo~\ref{cap4Resultados}, esta subseção documenta a arquitetura de tratamento de erros definida em projeto, isto é, o mecanismo pelo qual erros são detectados, padronizados e comunicados ao usuário, independentemente de qual falha específica os aciona.
 
-No \textit{backend}, cada \textit{handler} HTTP encapsula erros de validação, autorização e regra de negócio em uma resposta JSON padronizada (campo \texttt{error} e, quando aplicável, \texttt{details}), associada ao código de status HTTP correspondente (400 para validação, 401 para autenticação, 403 para autorização, 404 para recurso inexistente, 409 para conflito e 503 para dependência externa indisponível). Erros de validação de estrutura (\textit{binding}) são capturados pelo próprio \textit{framework} Gin e reportados com o detalhe do campo que falhou, prática que se mostrou relevante durante a depuração do incidente relatado na Seção~4.6.2.
+No \textit{backend}, cada \textit{handler} HTTP encapsula erros de validação, autorização e regra de negócio em uma resposta JSON padronizada (campo \texttt{error} e, quando aplicável, \texttt{details}), associada ao código de status HTTP correspondente (400 para validação, 401 para autenticação, 403 para autorização, 404 para recurso inexistente, 409 para conflito e 503 para dependência externa indisponível). Erros de validação de estrutura (\textit{binding}) são capturados pelo próprio \textit{framework} Gin e reportados com o detalhe do campo que falhou, prática que se mostrou relevante durante a depuração da falha relatada na Seção~\ref{sec:falha-cadastro-cliente}.
 
-No \textit{frontend}, os \textit{interceptors} do Axios centralizam o tratamento de respostas de erro: uma resposta HTTP 401 aciona a renovação silenciosa da sessão via \textit{refresh token} (Seção~3.2.5) antes de repetir a requisição original, e demais códigos de erro são propagados para o componente que originou a chamada, responsável por exibir a mensagem ao usuário. Essa centralização evita duplicação de lógica de tratamento de erro entre as páginas do painel, mas, como discutido na Seção~4.6.2, não substitui a validação de que o \textit{payload} enviado está completo antes da chamada -- lacuna que permitiu que o formulário de cliente enviasse uma requisição incompleta sem que o \textit{interceptor} pudesse preveni-la.
+No \textit{frontend}, os \textit{interceptors} do Axios centralizam o tratamento de respostas de erro: uma resposta HTTP 401 aciona a renovação silenciosa da sessão via \textit{refresh token} (Seção~\ref{sec:integracao-camadas}) antes de repetir a requisição original, e demais códigos de erro são propagados para o componente que originou a chamada, responsável por exibir a mensagem ao usuário. Essa centralização evita duplicação de lógica de tratamento de erro entre as páginas do painel, mas, como discutido na Seção~\ref{sec:falha-cadastro-cliente}, não substitui a validação de que o \textit{payload} enviado está completo antes da chamada, lacuna que permitiu que o formulário de cliente enviasse uma requisição incompleta sem que o \textit{interceptor} pudesse preveni-la.
 
 \subsection{Testes e Validação}
 \label{sec:testes-e-validacao-cap3}
 
 Durante o desenvolvimento, a validação do sistema combinou testes manuais da interface web e testes automatizados no \textit{backend}, com foco em regras de negócio, autenticação e consistência das respostas da API.
 
-No \textit{frontend}, foram realizados testes manuais em navegadores desktop e em dispositivos móveis (iPhone e Android), avaliando a responsividade do painel, o fluxo de autenticação (\textit{login}, renovação de sessão e redirecionamento para rotas protegidas), a navegação entre os módulos (clientes, produtos, orçamentos e configurações) e a consistência dos dados exibidos após as operações de criação e edição. Também foram verificados cenários de \textit{upload} de imagens (logo e produtos), incluindo a obtenção de URLs assinadas e a exibição correta dos arquivos gravados pelo backend de armazenamento local.
+No \textit{frontend}, foram realizados testes manuais em navegadores de computador e em dispositivos móveis (iPhone e Android), avaliando a responsividade do painel, o fluxo de autenticação (\textit{login}, renovação de sessão e redirecionamento para rotas protegidas), a navegação entre os módulos (clientes, produtos, orçamentos e configurações) e a consistência dos dados exibidos após as operações de criação e edição. Também foram verificados cenários de \textit{upload} de imagens (logo e produtos), incluindo a obtenção de URLs assinadas e a exibição correta dos arquivos gravados pelo \textit{backend} de armazenamento local.
 
-No \textit{backend}, a validação automatizada foi implementada com o pacote padrão \texttt{testing} da linguagem Go, executada por meio do comando \texttt{go test ./...}. Para isolar as regras de negócio das dependências de infraestrutura, foram utilizados \textit{mocks} manuais de repositórios (implementações em memória das interfaces de domínio), localizados no pacote \texttt{internal/mocks}. Essa abordagem permite simular o comportamento de persistência sem a necessidade de banco de dados real durante os testes unitários. Dentre os cenários cobertos pelos testes automatizados, destacam-se:
+No \textit{backend}, a validação automatizada foi implementada com o pacote padrão \texttt{testing} da linguagem Go, executada por meio do comando \texttt{go test ./\allowbreak{}...}. Para isolar as regras de negócio das dependências de infraestrutura, foram utilizados \textit{mocks} manuais de repositórios (implementações em memória das interfaces de domínio), localizados no pacote \texttt{internal/\allowbreak{}mocks}. Essa abordagem permite simular o comportamento de persistência sem a necessidade de banco de dados real durante os testes unitários. Dentre os cenários cobertos pelos testes automatizados, destacam-se:
 \begin{itemize}
-  \item autenticação e emissão/validação de tokens JWT, incluindo geração de \textit{access token} e \textit{refresh token};
+  \item autenticação e emissão/validação de \textit{tokens} JWT, incluindo geração de \textit{access token} e \textit{refresh token};
   \item hashing e verificação de senhas com bcrypt;
   \item \textit{provision} de \textit{tenant} com criação do usuário administrador e associação ao plano selecionado;
   \item validação de documentos (CNPJ), incluindo normalização de máscaras e rejeição de valores inválidos;
@@ -1282,11 +1373,11 @@ Essa combinação de testes manuais e automatizados permitiu verificar a corretu
 
 \section{Funcionalidades da Aplicação}
 
-O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de pequenas marmorarias por meio de uma interface moderna, intuitiva e amigável. A plataforma busca centralizar dados operacionais e apoiar decisões com base em indicadores do painel, priorizando usabilidade e segurança dos dados na nuvem. A seguir, estão descritas as funcionalidades atualmente implementadas, começando pela landing page de marketing e, em seguida, pelo painel administrativo.
+O aplicativo Onmarmoraria foi criado com o objetivo de facilitar a vida de pequenas marmorarias por meio de uma interface moderna, intuitiva e amigável. A plataforma busca centralizar dados operacionais e apoiar decisões com base em indicadores do painel, priorizando usabilidade e segurança dos dados na nuvem. A seguir, estão descritas as funcionalidades atualmente implementadas, começando pela página institucional de divulgação e, em seguida, pelo painel administrativo.
 
-\subsection{Landing page institucional}
+\subsection{Página Institucional (\textit{Landing Page})}
 
-Antes do acesso ao painel, o projeto conta com uma landing page voltada ao marketing do Onmarmoraria. Essa página apresenta a proposta de valor do ERP, funcionalidades previstas e um formulário de lista de espera. O objetivo é comunicar o produto a marmorarias e coletar informações de contato e perfil operacional (porte e volume de orçamentos), armazenadas no banco de dados do backend. A Figura~\ref{fig:landing-page} ilustra a página.
+Antes do acesso ao painel, o projeto conta com uma página institucional (\textit{landing page}) voltada à divulgação do Onmarmoraria. Essa página apresenta a proposta de valor do ERP, funcionalidades previstas e um formulário de lista de espera. O objetivo é comunicar o produto a marmorarias e coletar informações de contato e perfil operacional (porte e volume de orçamentos), armazenadas no banco de dados do \textit{backend}. A Figura~\ref{fig:landing-page} ilustra a página.
 
 \subsection{Tela Inicial de Login}
 
@@ -1302,14 +1393,14 @@ A primeira tela da aplicação apresenta o formulário de \textit{login}, guiand
 {\centering\small Fonte: O Autor, 2026.\par}
 \vspace{0.8em}
 
-Na versão atual do sistema, a tela de login foi simplificada, sem o atalho de autoatendimento discutido acima, conforme ilustrado na Figura~\ref{fig:login-atual} (desktop) e na Figura~\ref{fig:login-mobile} (dispositivo móvel), essa última também evidenciando a responsividade do formulário de autenticação.
+Na versão atual do sistema, a tela de \textit{login} foi simplificada, sem o atalho de autoatendimento discutido acima, conforme ilustrado na Figura~\ref{fig:login-atual} (\textit{desktop}) e na Figura~\ref{fig:login-mobile} (dispositivo móvel), essa última também evidenciando a responsividade do formulário de autenticação.
 
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
   % TODO(Marcelo): substituir o \fbox abaixo por
   % \includegraphics[width=0.85\textwidth]{figures/login-atual.png}
-  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: tela de login atual (desktop), sem o atalho de criação de conta]}}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: tela de \textit{login} atual (\textit{desktop}), sem o atalho de criação de conta]}}
   \caption{Tela de login na versão atual do sistema (desktop).}
   \label{fig:login-atual}
 \end{figure}
@@ -1321,8 +1412,8 @@ Na versão atual do sistema, a tela de login foi simplificada, sem o atalho de a
   \captionsetup{justification=centering}
   % TODO(Marcelo): substituir o \fbox abaixo por
   % \includegraphics[width=0.5\textwidth]{figures/login-mobile.png}
-  \fbox{\parbox[c][6cm][c]{0.5\textwidth}{\centering\itshape [Espaço reservado -- print: tela de login aberta no iPhone/Android]}}
-  \caption{Tela de login renderizada em viewport de \textit{smartphone}.}
+  \fbox{\parbox[c][6cm][c]{0.5\textwidth}{\centering\itshape [Espaço reservado -- print: tela de \textit{login} aberta no iPhone/Android]}}
+  \caption{Tela de login exibida na tela de um \textit{smartphone}.}
   \label{fig:login-mobile}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
@@ -1334,7 +1425,7 @@ O \textit{provision} cria a marmoraria e o usuário administrador em uma única 
 
 \subsection{Dashboard}
 
-A tela de \textit{dashboard} apresenta as principais métricas a serem analisadas. Esses indicadores são calculados no \textit{frontend} a partir dos orçamentos e clientes retornados pela API (não há endpoint dedicado de analytics). Entre elas:
+A tela de \textit{dashboard} apresenta as principais métricas a serem analisadas. Esses indicadores são calculados no \textit{frontend} a partir dos orçamentos e clientes retornados pela API (não há \textit{endpoint} dedicado de analytics). Entre elas:
 
 \begin{itemize}
     \item Orçamentos do mês;
@@ -1347,29 +1438,33 @@ A tela de \textit{dashboard} apresenta as principais métricas a serem analisada
     \item Top 5 clientes por valor orçado.
 \end{itemize}
 
+\begin{landscape}
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
-  \caption{Painel inicial (dashboard) com indicadores e gráficos.}
-  \includegraphics[width=0.95\textwidth]{figures/dashboard.png}
+  \caption{Painel inicial (\textit{dashboard}) com indicadores e gráficos.}
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{figures/dashboard.png}
   \label{fig:dashboard}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
+\end{landscape}
 \vspace{0.8em}
 
+\begin{landscape}
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
-  \caption{Continuação do dashboard com listagens e rankings.}
-  \includegraphics[width=0.95\textwidth]{figures/continuacao-dashboard.png}
+  \caption{Continuação do \textit{dashboard} com listagens e rankings.}
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{figures/continuacao-dashboard.png}
   \label{fig:dashboard-cont}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
+\end{landscape}
 \vspace{0.8em}
 
 \subsection{Gestão de Clientes}
 
-O módulo de clientes permite listar, criar, editar e excluir registros vinculados ao \textit{tenant}. O formulário contempla nome, e-mail, telefone, documento (CPF ou CNPJ), endereço, cidade, UF e CEP, com validações no frontend e regras no backend. A partir da listagem, o usuário pode abrir o formulário de novo cliente e, após o salvamento, o registro passa a constar na grade.
+O módulo de clientes permite listar, criar, editar e excluir registros vinculados ao \textit{tenant}. O formulário contempla nome, e-mail, telefone, documento (CPF ou CNPJ), endereço, cidade, UF e CEP, com validações no \textit{frontend} e regras no backend. A partir da listagem, o usuário pode abrir o formulário de novo cliente e, após o salvamento, o registro passa a constar na grade.
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
@@ -1385,7 +1480,7 @@ O módulo de clientes permite listar, criar, editar e excluir registros vinculad
 
 \subsection{Produtos e Orçamentos}
 
-O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com imagem armazenada pelo backend de armazenamento de mídias. O módulo de orçamentos permite criar e editar propostas vinculadas a clientes e itens, com atualização de status comercial e de obra, além de visualização/impressão. Esses fluxos constituem o núcleo operacional do MVP entregue neste trabalho.
+O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com imagem armazenada pelo \textit{backend} de armazenamento de mídias. O módulo de orçamentos permite criar e editar propostas vinculadas a clientes e itens, com atualização de status comercial e de obra, além de visualização/impressão. Esses fluxos constituem o núcleo operacional do MVP entregue neste trabalho.
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
@@ -1413,19 +1508,19 @@ O módulo de produtos permite cadastrar o catálogo da marmoraria, inclusive com
 
 \subsection{Configurações e Perfil}
 
-Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado pelo backend de armazenamento) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
+Nas configurações, o administrador atualiza dados cadastrais da empresa e o logo (via \textit{upload} assinado pelo \textit{backend} de armazenamento) e gerencia usuários do \textit{tenant}. No perfil, o usuário pode atualizar informações pessoais e avatar. Não há bloqueio por plano ou gateway de pagamento nesta versão do MVP.
 
 \subsection{Responsividade em Dispositivos Móveis}
 
-Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o painel foi acessado em navegador a partir de aparelhos físicos iPhone e Android, na mesma rede local do ambiente de desenvolvimento, permitindo observar o comportamento real de \textit{layout}, toque e navegação em telas de tamanho reduzido. As Figuras~\ref{fig:mobile-dashboard} e \ref{fig:mobile-clientes} ilustram o painel renderizado em viewport de \textit{smartphone}.
+Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o painel foi acessado em navegador a partir de aparelhos físicos iPhone e Android, na mesma rede local do ambiente de desenvolvimento, permitindo observar o comportamento real de \textit{layout}, toque e navegação em telas de tamanho reduzido. As Figuras~\ref{fig:mobile-dashboard} e \ref{fig:mobile-clientes} ilustram o painel exibido na tela de um \textit{smartphone}.
 
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
   % TODO(Marcelo): substituir o \fbox abaixo por
   % \includegraphics[width=0.85\textwidth]{figures/mobile-dashboard.png}
-  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: dashboard aberto no iPhone/Android]}}
-  \caption{Painel (dashboard) renderizado em viewport de \textit{smartphone}.}
+  \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: \textit{dashboard} aberto no iPhone/Android]}}
+  \caption{Painel (dashboard) exibido na tela de um \textit{smartphone}.}
   \label{fig:mobile-dashboard}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
@@ -1437,7 +1532,7 @@ Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o 
   % TODO(Marcelo): substituir o \fbox abaixo por
   % \includegraphics[width=0.85\textwidth]{figures/mobile-clientes.png}
   \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering\itshape [Espaço reservado -- print: listagem de clientes aberta no iPhone/Android]}}
-  \caption{Módulo de clientes renderizado em viewport de \textit{smartphone}.}
+  \caption{Módulo de clientes exibido na tela de um \textit{smartphone}.}
   \label{fig:mobile-clientes}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
@@ -1447,32 +1542,34 @@ Para além dos testes descritos na Seção~\ref{sec:testes-e-validacao-cap3}, o 
 
 Para complementar as funcionalidades principais, o Onmarmoraria utiliza serviços externos de armazenamento e, opcionalmente, de pagamento.
 
-\subsection{Armazenamento de Imagens: Backend Local e GCS/R2 Opcionais}
+\subsection{Armazenamento de Imagens: \textit{Backend} Local e GCS/R2 Opcionais}
 \label{sec:armazenamento-imagens}
 
-O armazenamento de logo da empresa, avatar de usuários e imagens de produtos é resolvido, por padrão, por um backend próprio em disco local (\texttt{internal/infra/storage/local}): a API assina um \textit{token} de \textit{upload} com expiração curta (HMAC-SHA256) e o navegador envia o arquivo diretamente ao próprio servidor da API, que grava em disco e serve o arquivo de volta por uma rota estática. Quando a variável \texttt{GCS\_BUCKET} é preenchida, o mesmo \textit{endpoint} de assinatura passa a emitir URLs de PUT/GET (esquema V4) contra um \textit{bucket} privado do Google Cloud Storage, sem qualquer alteração no \textit{frontend}. Em ambos os casos, apenas a referência (\texttt{object\_key}) é persistida no banco. Essa mesma interface de assinatura de URLs é compatível com serviços \textit{S3-compatible} de baixo custo, como o Cloudflare R2, caso essa opção venha a ser adotada no lugar do GCS.
+O armazenamento de logo da empresa, avatar de usuários e imagens de produtos é resolvido, por padrão, por um \textit{backend} próprio em disco local, implementado no pacote \texttt{internal/\allowbreak infra/\allowbreak storage/\allowbreak local}. A API assina um \textit{token} de \textit{upload} com expiração curta (HMAC-SHA256) e o navegador envia o arquivo diretamente ao próprio servidor da API, que grava em disco e serve o arquivo de volta por uma rota estática. Quando a variável \texttt{GCS\_BUCKET} é preenchida, o mesmo \textit{endpoint} de assinatura passa a emitir URLs de PUT/GET (esquema V4) contra um \textit{bucket} privado do Google Cloud Storage, sem qualquer alteração no \textit{frontend}. Em ambos os casos, apenas a referência (\texttt{object\_key}) é persistida no banco. Essa mesma interface de assinatura de URLs é compatível com serviços de baixo custo compatíveis com o Amazon S3, como o Cloudflare R2, caso essa opção venha a ser adotada no lugar do GCS.
 
-\subsection{Landing page e lista de espera}
+\subsection{Página Institucional e Lista de Espera}
 
-Foi desenvolvida uma landing page institucional (repositório separado) para divulgação do Onmarmoraria e captura de interesse de marmorarias. O formulário coleta nome, WhatsApp, estado, porte da equipe e volume médio de orçamentos. Os dados são enviados à API por \texttt{POST /api/v1/waitlist} e persistidos na tabela \texttt{waitlist\_leads} do PostgreSQL do próprio projeto. Em caso de WhatsApp já cadastrado, a API responde HTTP 409, e a interface informa o usuário.
+Foi desenvolvida uma página institucional (\textit{landing page}), em repositório separado, para divulgação do Onmarmoraria e cadastro de marmorarias interessadas. O formulário coleta nome, WhatsApp, estado, porte da equipe e volume médio de orçamentos. Os dados são enviados à API pela rota \texttt{POST} \texttt{/\allowbreak{}api/\allowbreak{}v1/\allowbreak{}waitlist} e gravados na tabela \texttt{waitlist\_leads} do PostgreSQL do próprio projeto. Em caso de WhatsApp já cadastrado, a API responde HTTP 409, e a interface informa o usuário.
 
+\begin{landscape}
 \begin{figure}[H]
   \centering
   \captionsetup{justification=centering}
-  \caption{Landing page institucional do Onmarmoraria.}
-  \includegraphics[width=0.95\textwidth]{figures/landing-page.png}
+  \caption{Página institucional (\textit{landing page}) do Onmarmoraria.}
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{figures/landing-page.png}
   \label{fig:landing-page}
 \end{figure}
 {\centering\small Fonte: O Autor, 2026.\par}
+\end{landscape}
 \vspace{0.8em}
 
-A seção de planos na landing descreve uma diferenciação futura por porte da marmoraria; nesta fase acadêmica o acesso ao ERP permanece aberto para demonstração, sem cobrança nem limitação de funcionalidades por assinatura.
+A seção de planos da página institucional descreve uma diferenciação futura por porte da marmoraria; nesta fase acadêmica o acesso ao ERP permanece aberto para demonstração, sem cobrança nem limitação de funcionalidades por assinatura.
 
 \subsection{GHCR e GitHub Actions (entrega contínua)}
 
-O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem e a publica no GHCR; a etapa de \textit{deploy} em uma VM ou VPS está implementada e versionada no pipeline (Seção~\ref{sec:workflow-deploy}), mas permanece preparada para quando a operação em nuvem for retomada, não sendo executada de forma contínua nesta fase de validação acadêmica (Capítulo~\ref{cap5Discussao}). Essa integração não se confunde com o armazenamento de mídias do usuário, resolvido pelo backend local descrito na Seção~\ref{sec:testes-e-validacao-cap3} e nesta seção.
+O GHCR armazena as imagens Docker da API. O GitHub Actions, a cada \textit{push} na ramificação principal, constrói a imagem e a publica no GHCR; a etapa de \textit{deploy} em uma VM ou VPS está implementada e versionada no \textit{pipeline} (Seção~\ref{sec:workflow-deploy}), mas permanece preparada para quando a operação em nuvem for retomada, não sendo executada de forma contínua nesta fase de validação acadêmica (Capítulo~\ref{cap5Discussao}). Essa integração não se confunde com o armazenamento de mídias do usuário, resolvido pelo \textit{backend} local descrito na Seção~\ref{sec:armazenamento-imagens}.
 
-O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/workflows/deploy.yml}), prevista para ser executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha; conforme discutido no Capítulo~\ref{cap5Discussao}, essa etapa está implementada e foi validada em ambiente local, mas não foi exercitada de forma contínua contra uma instância de nuvem pública nesta fase acadêmica.
+O trecho a seguir resume a etapa de implantação do \textit{workflow} do GitHub Actions (\texttt{.github/\allowbreak{}workflows/\allowbreak{}deploy.yml}), prevista para ser executada a cada \textit{push} na ramificação principal do repositório da API, após a construção e publicação da imagem no GHCR. O trecho ilustra a sincronização de configuração, o \textit{deploy}, o \textit{health check} e a reversão automática em caso de falha; conforme discutido no Capítulo~\ref{cap5Discussao}, essa etapa está implementada e foi validada em ambiente local, mas não foi exercitada de forma contínua contra uma instância de nuvem pública nesta fase acadêmica.
 \label{sec:workflow-deploy}
 
 \begin{verbatim}
@@ -1483,8 +1580,8 @@ PREVIOUS_TAG="$(cat .deployed_tag 2>/dev/null || echo latest)"
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 
-# health check com nova tentativa, seguido de rollback automático
-# para PREVIOUS_TAG caso o endpoint /health nao responda com sucesso
+# health check com nova tentativa; se falhar,
+# rollback automatico para PREVIOUS_TAG
 if ! curl -fsSk -H "Host: api.exemplo.com.br" \\
      https://localhost/health; then
   export IMAGE_TAG="$PREVIOUS_TAG"
@@ -1498,4 +1595,4 @@ echo "$IMAGE_TAG" > .deployed_tag
 
 \subsection*{Considerações Finais do Capítulo}
 
-Este capítulo detalhou o material e o método adotados: as tecnologias selecionadas, as etapas de desenvolvimento do \textit{backend} e do \textit{frontend}, a arquitetura de tratamento de erros (Seção~\ref{sec:estrategia-erros}), as funcionalidades implementadas no painel e na landing page, e as integrações externas (armazenamento de mídias e CI/CD). O Capítulo~\ref{cap4Resultados} apresenta os resultados obtidos a partir da validação prática dessa implementação -- testes funcionais, testes em dispositivos reais, desempenho e os incidentes concretos identificados durante o processo.
+Este capítulo detalhou o material e o método adotados: as tecnologias selecionadas, as etapas de desenvolvimento do \textit{backend} e do \textit{frontend}, a arquitetura de tratamento de erros (Seção~\ref{sec:estrategia-erros}), as funcionalidades implementadas no painel e na página institucional, e as integrações externas (armazenamento de mídias e CI/CD). O Capítulo~\ref{cap4Resultados} apresenta os resultados obtidos a partir da validação prática dessa implementação: testes funcionais, testes em dispositivos reais, desempenho e as falhas concretas identificadas durante o processo.

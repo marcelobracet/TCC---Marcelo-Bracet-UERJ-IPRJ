@@ -66,6 +66,8 @@
 %% Redefinição da formatação de Parágrafos 
 \setlength{\parindent}{1.3cm}
 \setlength{\parskip}{0cm}
+% Evita linhas ultrapassando a margem em trechos longos sem hifenização (ex.: código)
+\setlength{\emergencystretch}{3em}
 
 
 
@@ -85,12 +87,15 @@
 %% Forca underline na secao terciaria
 \newcommand{\tmpsubsection}[1]{}
 \let\tmpsubsection=\subsection
-\renewcommand{\subsection}[1]{\tmpsubsection{\underline{#1}}}
+% \@ifstar evita que o "*" de \subsection* seja lido como título (gerava "1.5.1 *")
+\renewcommand{\subsection}{\@ifstar{\tmpsubsection*}{\@subsectionunderline}}
+\newcommand{\@subsectionunderline}[1]{\tmpsubsection{\underline{#1}}}
 
 %% Forca underline na secao secundaroa
 \newcommand{\tmpsection}[1]{}
 \let\tmpsection=\section
-\renewcommand{\section}[1]{\tmpsection{\textbf{#1}}}
+\renewcommand{\section}{\@ifstar{\tmpsection*}{\@sectionbold}}
+\newcommand{\@sectionbold}[1]{\tmpsection{\textbf{#1}}}
 \makeatother
 
 %% Tornar as seções secundários com fonte em maiúscula
